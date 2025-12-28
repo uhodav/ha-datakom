@@ -10,6 +10,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
 )
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
@@ -196,15 +197,6 @@ async def async_setup_entry(
         sensor = DatakomParamSensor(api_url, node_id, device_id, pid, label, device_name, update_interval)
         sensors.append(sensor)
         _LOGGER.debug(f"Datakom: Created sensor {sensor.unique_id} for param {pid}")
-    
-    # Добавляем вычисляемые сенсоры
-    calculated_sensors = [
-        DatakomCalculatedSensor(api_url, node_id, device_id, device_name, update_interval, "avg_fuel_rate"),
-        DatakomCalculatedSensor(api_url, node_id, device_id, device_name, update_interval, "fuel_time_remaining"),
-        DatakomCalculatedSensor(api_url, node_id, device_id, device_name, update_interval, "specific_fuel_consumption"),
-        DatakomCalculatedSensor(api_url, node_id, device_id, device_name, update_interval, "battery_health"),
-    ]
-    sensors.extend(calculated_sensors)
     
     if sensors:
         _LOGGER.info(f"Datakom: Adding {len(sensors)} sensors")
@@ -404,165 +396,3 @@ class DatakomParamSensor(SensorEntity):
         """Вызывается когда сенсор добавлен в Home Assistant."""
         await super().async_added_to_hass()
         self._hass = self.hass
-
-
-class DatakomCalculatedSensor(SensorEntity):
-    """Вычисляемый сенсор на основе данных API Datakom."""
-
-    def __init__(self, api_url, node_id, device_id, device_name, update_interval, calc_type):
-        self._api_url = api_url
-        self._node_id = node_id
-        self._device_id = device_id
-        self._device_name = device_name
-        self._calc_type = calc_type
-        self._update_interval = update_interval
-        self._attr_should_poll = True
-        self._state = None
-        
-        # Настройки для разных типов вычисляемых сенсоров
-        if calc_type == "avg_fuel_rate":
-            self._attr_name = "Average Fuel Rate"
-            self._attr_unique_id = f"datakom_{node_id}_{device_id}_calc_avg_fuel_rate"
-            self._attr_native_unit_of_measurement = "L/h"
-            self._attr_device_class = None
-            self._attr_state_class = SensorStateClass.MEASUREMENT
-            self._attr_icon = "mdi:fuel"
-            self._attr_translation_key = "avg_fuel_rate"
-        elif calc_type == "fuel_time_remaining":
-            self._attr_name = "Fuel Time Remaining"
-            self._attr_unique_id = f"datakom_{node_id}_{device_id}_calc_fuel_time_remaining"
-            self._attr_native_unit_of_measurement = "h"
-            self._attr_device_class = SensorDeviceClass.DURATION
-            self._attr_state_class = SensorStateClass.MEASUREMENT
-            self._attr_icon = "mdi:clock-alert"
-            self._attr_translation_key = "fuel_time_remaining"
-        elif calc_type == "specific_fuel_consumption":
-            self._attr_name = "Specific Fuel Consumption"
-            self._attr_unique_id = f"datakom_{node_id}_{device_id}_calc_specific_fuel_consumption"
-            self._attr_native_unit_of_measurement = "L/kWh"
-            self._attr_device_class = None
-            self._attr_state_class = SensorStateClass.MEASUREMENT
-            self._attr_icon = "mdi:gauge"
-            self._attr_translation_key = "specific_fuel_consumption"
-        elif calc_type == "battery_health":
-            self._attr_name = "Battery Health"
-            self._attr_unique_id = f"datakom_{node_id}_{device_id}_calc_battery_health"
-            self._attr_native_unit_of_measurement = "%"
-            self._attr_device_class = SensorDeviceClass.BATTERY
-            self._attr_state_class = SensorStateClass.MEASUREMENT
-            self._attr_icon = "mdi:battery-heart-variant"
-            self._attr_translation_key = "battery_health"
-
-    @property
-    def scan_interval(self) -> timedelta:
-        """Return the scan interval in minutes."""
-        return timedelta(minutes=self._update_interval)
-
-    @property
-    def device_info(self):
-        """Информация о устройстве."""
-        return {
-            "identifiers": {(DOMAIN, f"{self._node_id}_{self._device_id}")},
-            "name": self._device_name,
-            "manufacturer": "Datakom",
-            "model": "Generator Controller",
-        }
-
-    @property
-    def extra_state_attributes(self):
-        """Дополнительные атрибуты."""
-        return {
-            "unique_id": self._attr_unique_id,
-            "device_id": self._device_id,
-            "device_name": self._device_name,
-            "calculation_type": self._calc_type,
-            "description": f"Calculated sensor for {self._attr_name}",
-        }
-
-    async def async_update(self) -> None:
-        """Обновление вычисляемого сенсора."""
-        url = f"{self._api_url}/dump_devm?did={self._device_id}&node_id={self._node_id}"
-        _LOGGER.debug(f"Datakom Calculated: requesting all params from {url}")
-        
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(url, timeout=15) as resp:
-                    data = await resp.json()
-                    if not data.get("success") or "result" not in data:
-                        _LOGGER.warning(f"Datakom Calculated: failed to get data for {self._calc_type}")
-                        return
-                    
-                    # Создаем словарь параметров для удобного доступа
-                    params = {}
-                    for p in data["result"]:
-                        label = p.get("label", "").lower()
-                        value = p.get("value")
-                        
-                        # Пропускаем N/A значения
-                        if value == "N/A" or value is None:
-                            continue
-                            
-                        try:
-                            value = float(value)
-                        except (ValueError, TypeError):
-                            continue
-                            
-                        params[label] = value
-                    
-                    # Вычисления в зависимости от типа
-                    if self._calc_type == "avg_fuel_rate":
-                        # Средний расход = Общий расход / Часы работы
-                        fuel_consumption = params.get("engine fuel consumption (ecu)") or params.get("engine fuel consump(flowm)")
-                        run_hours = params.get("engine run hours")
-                        
-                        if fuel_consumption and run_hours and run_hours > 0:
-                            self._state = round(fuel_consumption / run_hours, 2)
-                        else:
-                            self._state = None
-                    
-                    elif self._calc_type == "fuel_time_remaining":
-                        # Остаток времени = Остаток топлива / Текущий расход
-                        fuel_status = params.get("engine fuel status")
-                        fuel_rate = params.get("engine fuel rate(ecu)") or params.get("engine fuel rate(flowm)")
-                        
-                        if fuel_status and fuel_rate and fuel_rate > 0:
-                            self._state = round(fuel_status / fuel_rate, 1)
-                        else:
-                            self._state = None
-                    
-                    elif self._calc_type == "specific_fuel_consumption":
-                        # Удельный расход = Расход топлива / Выработанная энергия
-                        fuel_consumption = params.get("engine fuel consumption (ecu)") or params.get("engine fuel consump(flowm)")
-                        total_kwh = params.get("genset total kwh")
-                        
-                        if fuel_consumption and total_kwh and total_kwh > 0:
-                            self._state = round(fuel_consumption / total_kwh, 3)
-                        else:
-                            self._state = None
-                    
-                    elif self._calc_type == "battery_health":
-                        # Состояние батареи на основе минимального напряжения
-                        # 12.6V = 100%, 11.8V = 50%, 10.5V = 0%
-                        min_voltage = params.get("information min battery voltage")
-                        
-                        if min_voltage:
-                            if min_voltage >= 12.6:
-                                health = 100
-                            elif min_voltage <= 10.5:
-                                health = 0
-                            else:
-                                # Линейная интерполяция между 10.5V (0%) и 12.6V (100%)
-                                health = ((min_voltage - 10.5) / (12.6 - 10.5)) * 100
-                            
-                            self._state = round(health, 1)
-                        else:
-                            self._state = None
-                    
-                    _LOGGER.debug(f"Datakom Calculated: {self._calc_type} = {self._state}")
-                    
-            except Exception as e:
-                _LOGGER.error(f"Datakom Calculated: {self._calc_type} update error: {e}")
-
-    async def async_added_to_hass(self) -> None:
-        """Вызывается когда сенсор добавлен в Home Assistant."""
-        await super().async_added_to_hass()

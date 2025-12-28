@@ -1,0 +1,642 @@
+class DatakomControllerCard extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  setConfig(config) {
+    if (!config) {
+      throw new Error('Invalid configuration');
+    }
+    this.config = config;
+    this.render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this.updateStates();
+  }
+
+  getCardSize() {
+    return 6;
+  }
+
+  render() {
+    if (!this.config) return;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+        
+        .card-container {
+          background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+          border: 3px solid #444;
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+          font-family: 'Roboto', sans-serif;
+        }
+        
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding: 0 10px;
+        }
+        
+        .logo {
+          color: #fff;
+          font-size: 28px;
+          font-weight: bold;
+          letter-spacing: 2px;
+        }
+        
+        .logo-icon {
+          color: #e74c3c;
+          margin-right: 8px;
+        }
+        
+        .model {
+          color: #999;
+          font-size: 20px;
+          font-weight: 300;
+        }
+        
+        .main-layout {
+          display: grid;
+          grid-template-columns: 120px 1fr 100px;
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+        
+        .status-section {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .status-title {
+          color: #fff;
+          font-size: 12px;
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 8px;
+          text-align: center;
+        }
+        
+        .status-indicator {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          background: rgba(255,255,255,0.05);
+          border-radius: 4px;
+        }
+        
+        .status-label {
+          color: #ccc;
+          font-size: 10px;
+          text-transform: uppercase;
+          flex: 1;
+        }
+        
+        .led {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #333;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+          transition: all 0.3s ease;
+        }
+        
+        .led.on {
+          box-shadow: 0 0 12px currentColor, inset 0 0 6px currentColor;
+        }
+        
+        .led.green { color: #27ae60; }
+        .led.red { color: #e74c3c; }
+        .led.yellow { color: #f39c12; }
+        
+        .led.green.on { background: #27ae60; }
+        .led.red.on { background: #e74c3c; }
+        .led.yellow.on { background: #f39c12; }
+        
+        .display-section {
+          background: #e8e8e8;
+          border: 4px solid #555;
+          border-radius: 8px;
+          padding: 20px;
+          min-height: 200px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        
+        .display-title {
+          color: #2c3e50;
+          font-size: 14px;
+          font-weight: bold;
+          text-align: center;
+          margin-bottom: 12px;
+          text-transform: uppercase;
+        }
+        
+        .display-content {
+          display: grid;
+          gap: 3px;
+          padding: 0 20px;
+        }
+        
+        .display-value {
+          text-align: center;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .display-label {
+          color: #34495e;
+          font-size: 11px;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+        
+        .display-number {
+          color: #2c3e50;
+          font-size: 24px;
+          font-weight: bold;
+          font-family: 'Courier New', monospace;
+        }
+        
+        .side-indicators {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          justify-content: space-around;
+        }
+        
+        .side-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .side-label {
+          color: #ccc;
+          font-size: 9px;
+          text-transform: uppercase;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .side-icon {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .mimic-diagram {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          margin-top: 12px;
+        }
+        
+        .mimic-icon {
+          font-size: 20px;
+          color: #ccc;
+        }
+        
+        .mimic-line {
+          width: 3px;
+          height: 24px;
+          background: #ccc;
+          position: relative;
+        }
+        
+        .mimic-switch {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #f39c12;
+          position: absolute;
+          right: -5px;
+        }
+        
+        .side-led {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #333;
+          transition: all 0.3s ease;
+        }
+        
+        .side-led.on {
+          box-shadow: 0 0 16px currentColor;
+        }
+        .side-led.green.on {
+          background: #27ae60;
+          border-color: #4ec37f;
+        }
+        .side-led.red.on {
+          background: #e74c3c;
+          border-color: #a36059;
+        }
+        .side-led.yellow.on {
+          background: #f39c12;
+          border-color: #d4a300;
+        }
+        
+        .navigation-buttons {
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          margin: 20px 0;
+        }
+        
+        .nav-button {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: #2c2c2c;
+          border: 2px solid #555;
+          color: #fff;
+          font-size: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .nav-button:hover {
+          background: #3c3c3c;
+          border-color: #777;
+        }
+        
+        .nav-button:active {
+          transform: scale(0.95);
+        }
+        
+        .control-buttons {
+          display: flex;
+          justify-content: space-around;
+          gap: 12px;
+        }
+        
+        .control-button {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+        }
+        
+        .button-circle {
+          width: 70px;
+          height: 70px;
+          border-radius: 50%;
+          border: 3px solid;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+          font-size: 32px;
+        }
+        
+        .button-circle:hover {
+          transform: scale(1.05);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+        
+        .button-circle:active {
+          transform: scale(0.98);
+        }
+        
+        .button-indicator {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: #333;
+          border: 2px solid #2c2c2c;
+          transition: all 0.3s ease;
+        }
+        
+        .button-indicator.on {
+          box-shadow: 0 0 12px currentColor;
+        }
+        .button-indicator.green.on {
+          background: #27ae60;
+          border-color: #4ec37f;
+        }
+        .button-indicator.red.on {
+          background: #e74c3c;
+          border-color: #a36059;
+        }
+        .button-indicator.yellow.on {
+          background: #f39c12;
+          border-color: #d4a300;
+        }
+
+        
+        .button-label {
+          color: #fff;
+          font-size: 13px;
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
+        .btn-test { background: #f1c40f; border-color: #d4a300; color: #000; }
+        .btn-auto { background: #2c2c2c; border-color: #666; color: #fff; }
+        .btn-manual { background: #2c2c2c; border-color: #666; color: #fff; }
+        .btn-stop { background: #e74c3c; border-color: #c0392b; color: #fff; }
+        .btn-run { background: #27ae60; border-color: #229954; color: #fff; }
+        
+        .error-message {
+          color: #e74c3c;
+          text-align: center;
+          padding: 20px;
+        }
+      </style>
+      
+      <div class="card-container">
+        <div class="header">
+          <div class="logo">
+            <span class="logo-icon">●</span>DATAKOM
+          </div>
+          <div class="model">${this.config.model || 'D 500'}</div>
+        </div>
+        
+        <div class="main-layout">
+          <!-- Left: Status Indicators -->
+          <div class="status-section">
+            <div class="status-title">STATUS</div>
+            ${this.renderStatusIndicators()}
+          </div>
+          
+          <!-- Center: Display -->
+          <div class="display-section">
+            <div class="display-title">${this.config.display_title || 'GEN PHASE VOLTAGES'}</div>
+            <div class="display-content" id="display-content">
+              ${this.renderDisplayContent()}
+            </div>
+          </div>
+          
+          <!-- Right: Side Indicators -->
+          <div class="side-indicators">
+            ${this.renderSideIndicators()}
+          </div>
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <div class="navigation-buttons">
+          <div class="nav-button">☀</div>
+          <div class="nav-button">◄</div>
+          <div class="nav-button" style="font-size: 12px;">PGM</div>
+          <div class="nav-button">►</div>
+          <div class="nav-button">▲</div>
+        </div>
+        
+        <!-- Control Buttons -->
+    return `
+      <!-- Mains indicator -->
+      <div class="side-indicator">
+        <div class="side-led green" data-entity="${this.config.mains_available_entity || 'binary_sensor.mains'}"></div>
+        <div class="side-label">MAINS</div>
+      </div>
+      
+      <!-- Mimic Diagram -->
+      <div class="mimic-diagram">
+        <div class="mimic-icon">⚡</div>
+        <div class="mimic-line">
+          <div class="mimic-switch" data-entity="${this.config.mains_contactor_entity || ''}"></div>
+        </div>
+        <div class="mimic-icon">🏭</div>
+        <div class="mimic-line">
+          <div class="mimic-switch" data-entity="${this.config.load_switch_entity || ''}"></div>
+        </div>
+        <div class="mimic-icon">⚙️</div>
+        <div class="mimic-line">
+          <div class="mimic-switch" data-entity="${this.config.genset_contactor_entity || ''}"></div>
+        </div>
+    if (displayValues.length === 0) {
+      return `
+        <div class="display-value"><div class="display-label">L1</div><div class="display-number">0</div></div>
+        <div class="display-value"><div class="display-label">0-2</div><div class="display-number">0</div></div>
+        <div class="display-value"><div class="display-label">L2</div><div class="display-number">0</div></div>
+        <div class="display-value"><div class="display-label">0-3</div><div class="display-number">0</div></div>
+        <div class="display-value"><div class="display-label">L3</div><div class="display-number">0</div></div>
+        <div class="display-value"><div class="display-label">0-1</div><div class="display-number">0</div></div>
+      `;
+    }
+    return displayValues.map(item => `
+      <div class="display-value">
+        <div class="display-label">${item.label || ''}</div>
+        <div class="display-number" data-entity="${item.entity || ''}">--</div>
+        ${item.col ? `<div class="display-label">${item.col}</div>` : ''}
+        <div class="display-number" data-entity="${item.entity2
+        <div class="side-led green" data-entity="${this.config.genset_available_entity || 'binary_sensor.genset'}"></div>
+        <div class="side-label">GENSET</div>
+      </div>
+    `
+  renderStatusIndicators() {
+    const indicators = this.config.status_indicators || [];
+    return indicators.map(indicator => `
+      <div class="status-indicator">
+        <span class="status-label">${indicator.label || ''}</span>
+        <div class="led ${indicator.color || 'red'}" data-entity="${indicator.entity || ''}"></div>
+      </div>
+    `).join('');
+  }
+
+  renderDisplayContent() {
+    const displayValues = this.config.display_values || [];
+    return displayValues.map(item => `
+      <div class="display-value">
+        <div class="display-label">${item.label || ''}</div>
+        <div class="display-number" data-entity="${item.entity || ''}">--</div>
+      </div>
+    `).join('');
+  }
+
+  renderSideIndicators() {
+    const indicators = this.config.side_indicators || [];
+    return indicators.map(indicator => `
+      <div class="side-indicator">
+        <div class="side-label">${indicator.label || ''}</div>
+        <div class="side-icon">
+          <div class="side-led ${indicator.color || 'green'}" data-entity="${indicator.entity || ''}"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  renderControlButtons() {
+    const buttons = this.config.control_buttons || [
+      { action: 'test', label: 'TEST', class: 'btn-test', icon: '⚙', indicator_entity: 'binary_sensor.test' },
+      { action: 'auto', label: 'AUTO', class: 'btn-auto', icon: '🔧', indicator_entity: 'binary_sensor.auto' },
+      { action: 'manual', label: 'MAN', class: 'btn-manual', icon: '✋', indicator_entity: 'binary_sensor.manual' },
+      { action: 'stop', label: 'STOP', class: 'btn-stop', icon: 'O', indicator_entity: 'binary_sensor.stop' },
+      { action: 'run', label: 'RUN', class: 'btn-run', icon: 'I', indicator_entity: 'binary_sensor.run' }
+    ];
+    
+    return buttons.map(btn => `
+      <div class="control-button">
+        <div class="button-circle ${btn.class || ''}" data-action="${btn.action || ''}" data-tap-action="${btn.tap_action || ''}">
+          ${btn.icon || ''}
+          <div class="button-indicator ${btn.indicator_color || 'yellow'}" data-entity="${btn.indicator_entity || ''}"></div>
+        </div>
+        <div class="button-label">${btn.label || ''}</div>
+      </div>
+    `).join('');
+  }
+
+  setupEventListeners() {
+    // Control button clicks
+    this.shadowRoot.querySelectorAll('.button-circle').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const action = e.currentTarget.getAttribute('data-action');
+        const tapAction = e.currentTarget.getAttribute('data-tap-action');
+        if (tapAction) {
+          this.handleTapAction(JSON.parse(tapAction));
+        }
+      });
+    });
+  }
+
+  handleTapAction(tapAction) {
+    if (!tapAction || !this._hass) return;
+    
+    switch (tapAction.action) {
+      case 'call-service':
+        this._hass.callService(
+          tapAction.service.split('.')[0],
+          tapAction.service.split('.')[1],
+          tapAction.service_data || {}
+        );
+        break;
+      case 'navigate':
+        window.location.hash = tapAction.navigation_path;
+        break;
+      case 'more-info':
+        const event = new Event('hass-more-info', {
+          bubbles: true,
+          composed: true,
+        });
+        event.detail = { entityId: tapAction.entity };
+        this.dispatchEvent(event);
+        break;
+    }
+  }
+
+  updateStates() {
+    if (!this._hass || !this.shadowRoot) return;
+    
+    // Update status LEDs
+    this.shadowRoot.querySelectorAll('.status-indicator .led').forEach(led => {
+      const entity = led.getAttribute('data-entity');
+      if (entity && this._hass.states[entity]) {
+        const state = this._hass.states[entity].state;
+        led.classList.toggle('on', state === 'on' || state === 'true');
+      }
+    });
+    
+    // Update side LEDs and mimic switches
+    this.shadowRoot.querySelectorAll('.side-led, .mimic-switch').forEach(led => {
+      const entity = led.getAttribute('data-entity');
+      if (entity && this._hass.states[entity]) {
+        const state = this._hass.states[entity].state;
+        led.classList.toggle('on', state === 'on' || state === 'true');
+      }
+    });
+    
+    // Update button indicators
+    this.shadowRoot.querySelectorAll('.button-indicator').forEach(indicator => {
+      const entity = indicator.getAttribute('data-entity');
+      if (entity && this._hass.states[entity]) {
+        const state = this._hass.states[entity].state;
+        indicator.classList.toggle('on', state === 'on' || state === 'true');
+      }
+    });
+    
+    // Update display values
+    this.shadowRoot.querySelectorAll('.display-number').forEach(display => {
+      const entity = display.getAttribute('data-entity');
+      if (entity && this._hass.states[entity]) {
+        const state = this._hass.states[entity];
+        const value = parseFloat(state.state);
+        display.textContent = isNaN(value) ? state.state : Math.round(value);
+      }
+    });
+  }
+
+  static getConfigElement() {
+    return document.createElement('datakom-controller-card-editor');
+  }
+
+  static getStubConfig() {
+    return {
+      model: 'D 500',
+      display_title: 'GEN PHASE VOLTAGES',
+      status_indicators: [
+        { label: 'AUTO READY', color: 'green', entity: 'binary_sensor.auto' },
+        { label: 'ALARM', color: 'red', entity: 'binary_sensor.alarm_shutdown' },
+        { label: 'WARNING', color: 'red', entity: 'binary_sensor.alarm_warning' },
+        { label: 'SERVICE REQUEST', color: 'red', entity: '' },
+        { label: '', color: 'red', entity: '' },
+        { label: '', color: 'red', entity: '' }
+      ],
+      display_values: [
+        { label: 'L1', col: '0-2', entity: 'sensor.genset_l1' },
+        { label: 'L2', col: '0-3', entity: 'sensor.genset_l2' },
+        { label: 'L3', col: '0-1', entity: 'sensor.genset_l3' }
+      ],
+      side_indicators: [
+        { label: 'MAINS', color: 'green', entity: 'binary_sensor.mains', position: 'top' },
+        { label: '', color: 'green', entity: '', position: 'top-icon' },
+        { label: 'LOAD', color: 'yellow', entity: '', position: 'middle' },
+        { label: '', color: 'green', entity: 'binary_sensor.genset', position: 'bottom-icon' },
+        { label: 'GENSET', color: 'green', entity: '', position: 'bottom' }
+      ],
+      control_buttons: [
+        { action: 'test', label: 'TEST', class: 'btn-test', icon: '⚙', indicator_entity: 'binary_sensor.test', indicator_color: 'yellow' },
+        { action: 'auto', label: 'AUTO', class: 'btn-auto', icon: '🏠', indicator_entity: 'binary_sensor.auto', indicator_color: 'green' },
+        { action: 'manual', label: 'MAN', class: 'btn-manual', icon: '✋', indicator_entity: 'binary_sensor.manual', indicator_color: 'yellow' },
+        { action: 'stop', label: 'STOP', class: 'btn-stop', icon: 'O', indicator_entity: 'binary_sensor.stop', indicator_color: 'red' },
+        { action: 'run', label: 'RUN', class: 'btn-run', icon: 'I', indicator_entity: 'binary_sensor.run', indicator_color: 'green' }
+      ]
+    };
+  }
+}
+
+customElements.define('datakom-controller-card', DatakomControllerCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'datakom-controller-card',
+  name: 'Datakom Controller Card',
+  description: 'Custom card for Datakom generator controller interface',
+  preview: true,
+  documentationURL: 'https://github.com/uhodav/ha-datakom'
+});
+
+console.info(
+  '%c DATAKOM-CONTROLLER-CARD %c v1.0.0 ',
+  'color: white; background: #e74c3c; font-weight: 700;',
+  'color: #e74c3c; background: white; font-weight: 700;'
+);

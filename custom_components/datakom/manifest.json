@@ -1,7 +1,7 @@
 {
   "domain": "datakom",
   "name": "Datakom",
-  "documentation": "https://github.com/yourusername/datakom-ha",
+  "documentation": "https://github.com/uhodav/ha-datakom",
   "requirements": [],
   "codeowners": [],
   "version": "2.0.0",

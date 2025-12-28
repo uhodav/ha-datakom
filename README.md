@@ -23,10 +23,17 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 ## Installation
 
 1. Copy the `custom_components/datakom` folder to your Home Assistant `custom_components` directory
-2. Restart Home Assistant
-3. Go to **Settings → Devices & Services → Add Integration**
-4. Search for "Datakom API"
-5. Follow the configuration steps
+2. Copy the `www` folder contents to your Home Assistant `config/www/datakom/` directory
+3. Restart Home Assistant
+4. Add the Lovelace resource:
+   - Go to **Settings → Dashboards → Resources → Add Resource**
+   - URL: `/local/datakom/datakom-controller-card.js`
+   - Resource type: **JavaScript Module**
+   - Click **Create**
+5. Refresh your browser (Ctrl+F5)
+6. Go to **Settings → Devices & Services → Add Integration**
+7. Search for "Datakom API"
+8. Follow the configuration steps
 
 ## Configuration
 
@@ -91,6 +98,78 @@ Parameters from the API are automatically converted to sensors:
 
 ### Buttons
 - **`button.restart`** - Restart device controller
+
+## Custom Lovelace Card
+
+The integration includes a custom Datakom Controller Card that mimics the original D500 panel interface.
+
+### Installation
+1. Copy `www` folder to `config/www/datakom/`
+2. Add resource: **Settings → Dashboards → Resources**
+   - URL: `/local/datakom/datakom-controller-card.js`
+   - Type: **JavaScript Module**
+3. Refresh browser (Ctrl+F5)
+
+### Usage
+```yaml
+type: custom:datakom-controller-card
+model: D 500
+display_title: GEN PHASE VOLTAGES
+status_indicators:
+  - label: AUTO READY
+    color: green
+    entity: binary_sensor.auto
+  - label: ALARM
+    color: red
+    entity: binary_sensor.alarm_shutdown
+display_values:
+  - label: L1
+    entity: sensor.genset_l1
+  - label: L2
+    entity: sensor.genset_l2
+  - label: L3
+    entity: sensor.genset_l3
+side_indicators:
+  - label: MAINS
+    color: green
+    entity: binary_sensor.mains
+  - label: GENSET
+    color: green
+    entity: binary_sensor.genset
+control_buttons:
+  - action: test
+    label: TEST
+    class: btn-test
+    icon: ⚙
+    indicator_entity: binary_sensor.test
+    indicator_color: yellow
+  - action: auto
+    label: AUTO
+    class: btn-auto
+    icon: 🔧
+    indicator_entity: binary_sensor.auto
+    indicator_color: green
+  - action: manual
+    label: MAN
+    class: btn-manual
+    icon: ✋
+    indicator_entity: binary_sensor.manual
+    indicator_color: yellow
+  - action: stop
+    label: STOP
+    class: btn-stop
+    icon: O
+    indicator_entity: binary_sensor.stop
+    indicator_color: red
+  - action: run
+    label: RUN
+    class: btn-run
+    icon: I
+    indicator_entity: binary_sensor.run
+    indicator_color: green
+```
+
+See [www/README.md](www/README.md) for detailed card configuration.
 
 ## Example Dashboard
 
@@ -173,10 +252,17 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 ## Встановлення
 
 1. Скопіюйте папку `custom_components/datakom` до директорії `custom_components` вашого Home Assistant
-2. Перезапустіть Home Assistant
-3. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
-4. Знайдіть "Datakom API"
-5. Слідуйте крокам налаштування
+2. Скопіюйте вміст папки `www` до `config/www/datakom/`
+3. Перезапустіть Home Assistant
+4. Додайте Lovelace ресурс:
+   - Перейдіть до **Налаштування → Панелі → Ресурси → Додати ресурс**
+   - URL: `/local/datakom/datakom-controller-card.js`
+   - Тип ресурсу: **JavaScript Module**
+   - Натисніть **Створити**
+5. Оновіть браузер (Ctrl+F5)
+6. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
+7. Знайдіть "Datakom API"
+8. Слідуйте крокам налаштування
 
 ## Налаштування
 
