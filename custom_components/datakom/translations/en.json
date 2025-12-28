@@ -1,0 +1,292 @@
+{
+  "title": "Datakom API",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Step 1: API setup",
+        "description": "Enter the API URL and update interval.",
+        "data": {
+          "api_url": "API URL",
+          "update_interval": "Update interval (minutes)"
+        },
+        "data_description": {
+          "api_url": "Base API URL, e.g. https://example.com/datakom/api",
+          "update_interval": "How often to fetch data (1-60 minutes)"
+        }
+      },
+      "device": {
+        "title": "Step 2: Select device",
+        "description": "Choose the device to monitor.",
+        "data": {
+          "node_id": "Node",
+          "device_id": "Device"
+        }
+      },
+      "params": {
+        "title": "Step 3: Select parameters",
+        "description": "Choose the parameters to create sensors for.",
+        "data": {
+          "param_ids": "Parameters"
+        }
+      }
+    },
+    "step1_user": "API setup (step {step})",
+    "step2_device_id": "Device (step {step})",
+    "step3_params": "Parameters (step {step})",
+    "error": {
+      "cannot_connect": "Failed to connect to API",
+      "invalid_auth": "Invalid credentials",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_voltage": {
+        "name": "Battery Voltage"
+      },
+      "battery_voltage1": {
+        "name": "Battery Voltage 1"
+      },
+      "battery_voltage2": {
+        "name": "Battery Voltage 2"
+      },
+      "engine_rpm": {
+        "name": "Engine RPM"
+      },
+      "engine_run_hours": {
+        "name": "Engine Run Hours"
+      },
+      "engine_coolant_temp": {
+        "name": "Coolant Temperature"
+      },
+      "engine_oil_pressure": {
+        "name": "Oil Pressure"
+      },
+      "engine_oil_temp": {
+        "name": "Oil Temperature"
+      },
+      "engine_fuel_level": {
+        "name": "Fuel Level"
+      },
+      "genset_l1": {
+        "name": "Genset L1"
+      },
+      "genset_l2": {
+        "name": "Genset L2"
+      },
+      "genset_l3": {
+        "name": "Genset L3"
+      },
+      "genset_i1": {
+        "name": "Genset I1"
+      },
+      "genset_i2": {
+        "name": "Genset I2"
+      },
+      "genset_i3": {
+        "name": "Genset I3"
+      },
+      "genset_freq": {
+        "name": "Genset Frequency"
+      },
+      "genset_tot_active_pwr": {
+        "name": "Total Active Power"
+      },
+      "genset_tot_reactive_pwr": {
+        "name": "Total Reactive Power"
+      },
+      "avg_fuel_rate": {
+        "name": "Average Fuel Rate"
+      },
+      "fuel_time_remaining": {
+        "name": "Fuel Time Remaining"
+      },
+      "specific_fuel_consumption": {
+        "name": "Specific Fuel Consumption"
+      },
+      "battery_health": {
+        "name": "Battery Health"
+      },
+      "genset_tot_apparent_pwr": {
+        "name": "Total Apparent Power"
+      },
+      "genset_pwr_factor": {
+        "name": "Power Factor"
+      },
+      "mains_l1": {
+        "name": "Mains L1"
+      },
+      "mains_l2": {
+        "name": "Mains L2"
+      },
+      "mains_l3": {
+        "name": "Mains L3"
+      },
+      "mains_freq": {
+        "name": "Mains Frequency"
+      },
+      "genset_mode": {
+        "name": "Genset Mode",
+        "state": {
+          "stop": "Stop",
+          "auto": "Auto",
+          "manual": "Manual",
+          "test": "Test",
+          "auto_start": "Auto-Start",
+          "remote": "Remote",
+          "schedule": "Schedule",
+          "maintenance": "Maintenance",
+          "emergency": "Emergency / Safe"
+        }
+      },
+      "genset_state": {
+        "name": "Genset State",
+        "state": {
+          "at_rest": "Genset at Rest",
+          "wait_before_fuel": "Wait Before Fuel",
+          "engine_preheat": "Engine Preheat",
+          "wait_oil_flash_off": "Wait Oil Flash Off",
+          "crank_rest": "Crank Rest",
+          "cranking": "Cranking",
+          "engine_run_idle": "Engine Run Idle Speed",
+          "engine_heating": "Engine Heating",
+          "running_off_load": "Running Off Load",
+          "synchronizing_to_mains": "Synchronizing to Mains",
+          "load_transfer_to_genset": "Load Transfer to Genset",
+          "gen_cb_activation": "Gen CB Activation",
+          "genset_cb_timer": "Genset CB Timer",
+          "master_genset_on_load": "Master Genset On Load",
+          "peak_lopping": "Peak Lopping",
+          "power_exporting": "Power Exporting",
+          "slave_genset_on_load": "Slave Genset On Load",
+          "synchronizing_back_to_mains": "Synchronizing Back to Mains",
+          "load_transfer_to_mains": "Load Transfer to Mains",
+          "mains_cb_activation": "Mains CB Activation",
+          "mains_cb_timer": "Mains CB Timer",
+          "stop_with_cooldown": "Stop with Cooldown",
+          "cooling_down": "Cooling Down",
+          "engine_stop_idle": "Engine Stop Idle Speed",
+          "immediate_stop": "Immediate Stop",
+          "engine_stopping": "Engine Stopping"
+        }
+      },
+      "engine_state": {
+        "name": "Engine State",
+        "state": {
+          "off": "Engine Off",
+          "cranking": "Cranking",
+          "running": "Running",
+          "stopping": "Stopping",
+          "failed_start": "Failed to Start",
+          "stalled": "Stalled",
+          "oil_pressure_low": "Oil Pressure Low",
+          "high_temperature": "High Temperature",
+          "overspeed": "Overspeed"
+        }
+      },
+      "breaker_state": {
+        "name": "Breaker State",
+        "state": {
+          "both_open": "Both Open",
+          "genset_closed": "Genset Breaker Closed",
+          "mains_closed": "Mains Breaker Closed",
+          "both_closed": "Both Closed (Fault)"
+        }
+      },
+      "mains_state": {
+        "name": "Mains State",
+        "state": {
+          "ok": "Mains OK",
+          "fail": "Mains Fail",
+          "restore_wait": "Mains Restore Wait",
+          "return_delay": "Return Delay",
+          "transfer_to_genset": "Transfer to Genset",
+          "transfer_to_mains": "Transfer to Mains"
+        }
+      },
+      "battery_state": {
+        "name": "Battery State",
+        "state": {
+          "normal": "Normal",
+          "low": "Low",
+          "critical": "Critical",
+          "disconnected": "Disconnected",
+          "charging": "Charging"
+        }
+      },
+      "start_source": {
+        "name": "Start Request Source",
+        "state": {
+          "none": "None",
+          "manual": "Manual",
+          "ats_mains_fail": "ATS/Mains Fail",
+          "remote": "Remote",
+          "schedule": "Schedule",
+          "load_demand": "Load Demand",
+          "test": "Test"
+        }
+      },
+      "running_type": {
+        "name": "Running Type",
+        "state": {
+          "no_load": "Running No-load",
+          "on_load": "Running On-load",
+          "test": "Test Run",
+          "maintenance": "Maintenance Run"
+        }
+      }
+    },
+    "binary_sensor": {
+      "api_connection": {
+        "name": "API Connection"
+      },
+      "alarm_shutdown": {
+        "name": "Alarm - Shutdown"
+      },
+      "alarm_warning": {
+        "name": "Alarm - Warning"
+      },
+      "alarm_loaddump": {
+        "name": "Alarm - LoadDump"
+      },
+      "mains": {
+        "name": "Mains"
+      },
+      "genset": {
+        "name": "Genset"
+      },
+      "auto": {
+        "name": "Auto Mode"
+      },
+      "manual": {
+        "name": "Manual Mode"
+      },
+      "run": {
+        "name": "Running"
+      },
+      "stop": {
+        "name": "Stopped"
+      },
+      "test": {
+        "name": "Test Mode"
+      }
+    },
+    "button": {
+      "start": {
+        "name": "Start"
+      },
+      "stop": {
+        "name": "Stop"
+      },
+      "reset_alarm": {
+        "name": "Reset Alarm"
+      },
+      "restart": {
+        "name": "Restart"
+      }
+    }
+  }
+}

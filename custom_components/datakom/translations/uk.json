@@ -1,0 +1,292 @@
+{
+  "title": "Datakom API",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Крок 1: Налаштування API",
+        "description": "Введіть URL API та інтервал оновлення.",
+        "data": {
+          "api_url": "URL API",
+          "update_interval": "Інтервал оновлення (хвилини)"
+        },
+        "data_description": {
+          "api_url": "Базовий URL API, наприклад https://example.com/datakom/api",
+          "update_interval": "Як часто оновлювати дані (1-60 хвилин)"
+        }
+      },
+      "device": {
+        "title": "Крок 2: Вибір пристрою",
+        "description": "Оберіть пристрій для моніторингу.",
+        "data": {
+          "node_id": "Вузол",
+          "device_id": "Пристрій"
+        }
+      },
+      "params": {
+        "title": "Крок 3: Вибір параметрів",
+        "description": "Оберіть параметри, для яких будуть створені сенсори.",
+        "data": {
+          "param_ids": "Параметри"
+        }
+      }
+    },
+    "step1_user": "Налаштування API (крок {step})",
+    "step2_device_id": "Пристрій (крок {step})",
+    "step3_params": "Параметри (крок {step})",
+    "error": {
+      "cannot_connect": "Помилка підключення до API",
+      "invalid_auth": "Невірні облікові дані",
+      "unknown": "Невідома помилка"
+    },
+    "abort": {
+      "already_configured": "Пристрій вже налаштовано"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_voltage": {
+        "name": "Напруга АКБ"
+      },
+      "battery_voltage1": {
+        "name": "Напруга АКБ1"
+      },
+      "battery_voltage2": {
+        "name": "Напруга АКБ2"
+      },
+      "engine_rpm": {
+        "name": "Оберти двигуна"
+      },
+      "engine_run_hours": {
+        "name": "Мотогодини"
+      },
+      "engine_coolant_temp": {
+        "name": "Температура ОР"
+      },
+      "engine_oil_pressure": {
+        "name": "Тиск масла"
+      },
+      "engine_oil_temp": {
+        "name": "Температура масла"
+      },
+      "engine_fuel_level": {
+        "name": "Рівень палива"
+      },
+      "genset_l1": {
+        "name": "Генератор L1"
+      },
+      "genset_l2": {
+        "name": "Генератор L2"
+      },
+      "genset_l3": {
+        "name": "Генератор L3"
+      },
+      "genset_i1": {
+        "name": "Генератор I1"
+      },
+      "genset_i2": {
+        "name": "Генератор I2"
+      },
+      "genset_i3": {
+        "name": "Генератор I3"
+      },
+      "genset_freq": {
+        "name": "Частота генератора"
+      },
+      "genset_tot_active_pwr": {
+        "name": "Загальна активна потужність"
+      },
+      "genset_tot_reactive_pwr": {
+        "name": "Загальна реактивна потужність"
+      },
+      "avg_fuel_rate": {
+        "name": "Середня витрата палива"
+      },
+      "fuel_time_remaining": {
+        "name": "Залишок часу роботи"
+      },
+      "specific_fuel_consumption": {
+        "name": "Питома витрата палива"
+      },
+      "battery_health": {
+        "name": "Стан батареї"
+      },
+      "genset_tot_apparent_pwr": {
+        "name": "Загальна повна потужність"
+      },
+      "genset_pwr_factor": {
+        "name": "Коефіцієнт потужності"
+      },
+      "mains_l1": {
+        "name": "Мережа L1"
+      },
+      "mains_l2": {
+        "name": "Мережа L2"
+      },
+      "mains_l3": {
+        "name": "Мережа L3"
+      },
+      "mains_freq": {
+        "name": "Частота мережі"
+      },
+      "genset_mode": {
+        "name": "Режим генератора",
+        "state": {
+          "stop": "Зупинено",
+          "auto": "Автоматичний",
+          "manual": "Ручний",
+          "test": "Тестовий",
+          "auto_start": "Авто-запуск",
+          "remote": "Віддалений",
+          "schedule": "За розкладом",
+          "maintenance": "Технічне обслуговування",
+          "emergency": "Аварійний / Безпечний"
+        }
+      },
+      "genset_state": {
+        "name": "Стан генератора",
+        "state": {
+          "at_rest": "Генератор у стані спокою",
+          "wait_before_fuel": "Очікування перед подачею палива",
+          "engine_preheat": "Прогрів двигуна",
+          "wait_oil_flash_off": "Очікування займання палива",
+          "crank_rest": "Запуск у стані спокою",
+          "cranking": "Запуск",
+          "engine_run_idle": "Холостий хід двигуна",
+          "engine_heating": "Нагрів двигуна",
+          "running_off_load": "Робота без навантаження",
+          "synchronizing_to_mains": "Синхронізація з мережею",
+          "load_transfer_to_genset": "Передача навантаження до генератора",
+          "gen_cb_activation": "Активація CB генератора",
+          "genset_cb_timer": "Таймер CB генератора",
+          "master_genset_on_load": "Ведучий генератор під навантаженням",
+          "peak_lopping": "Зрізання пікових навантажень",
+          "power_exporting": "Експорт енергії",
+          "slave_genset_on_load": "Ведений генератор під навантаженням",
+          "synchronizing_back_to_mains": "Синхронізація назад з мережею",
+          "load_transfer_to_mains": "Передача навантаження мережі живлення",
+          "mains_cb_activation": "Активація CB мережі живлення",
+          "mains_cb_timer": "Таймер CB мережі",
+          "stop_with_cooldown": "Зупинка з охолодженням",
+          "cooling_down": "Охолодження",
+          "engine_stop_idle": "Зупинка двигуна на холостому ходу",
+          "immediate_stop": "Негайна зупинка",
+          "engine_stopping": "Зупинка двигуна"
+        }
+      },
+      "engine_state": {
+        "name": "Стан двигуна",
+        "state": {
+          "off": "Вимкнено",
+          "cranking": "Прокрутка",
+          "running": "Працює",
+          "stopping": "Зупинка",
+          "failed_start": "Помилка запуску",
+          "stalled": "Заглух",
+          "oil_pressure_low": "Низький тиск масла",
+          "high_temperature": "Висока температура",
+          "overspeed": "Перевищення обертів"
+        }
+      },
+      "breaker_state": {
+        "name": "Стан вимикачів",
+        "state": {
+          "both_open": "Обидва розімкнуті",
+          "genset_closed": "Генератор підключено",
+          "mains_closed": "Мережа підключена",
+          "both_closed": "Обидва замкнуті (аварія)"
+        }
+      },
+      "mains_state": {
+        "name": "Стан мережі",
+        "state": {
+          "ok": "Мережа в нормі",
+          "fail": "Збій мережі",
+          "restore_wait": "Очікування відновлення",
+          "return_delay": "Затримка повернення",
+          "transfer_to_genset": "Перехід на генератор",
+          "transfer_to_mains": "Перехід на мережу"
+        }
+      },
+      "battery_state": {
+        "name": "Стан батареї",
+        "state": {
+          "normal": "Норма",
+          "low": "Низький заряд",
+          "critical": "Критичний",
+          "disconnected": "Відключено",
+          "charging": "Зарядка"
+        }
+      },
+      "start_source": {
+        "name": "Джерело запуску",
+        "state": {
+          "none": "Немає",
+          "manual": "Вручну",
+          "ats_mains_fail": "АВР/Збій мережі",
+          "remote": "Віддалений",
+          "schedule": "За розкладом",
+          "load_demand": "За навантаженням",
+          "test": "Тестовий"
+        }
+      },
+      "running_type": {
+        "name": "Тип роботи",
+        "state": {
+          "no_load": "Без навантаження",
+          "on_load": "Під навантаженням",
+          "test": "Тестовий режим",
+          "maintenance": "Техобслуговування"
+        }
+      }
+    },
+    "binary_sensor": {
+      "api_connection": {
+        "name": "API з'єднання"
+      },
+      "alarm_shutdown": {
+        "name": "Аварія - зупинка"
+      },
+      "alarm_warning": {
+        "name": "Аварія - попередження"
+      },
+      "alarm_loaddump": {
+        "name": "Аварія - скидання навантаження"
+      },
+      "mains": {
+        "name": "Мережа"
+      },
+      "genset": {
+        "name": "Генератор"
+      },
+      "auto": {
+        "name": "Автоматичний режим"
+      },
+      "manual": {
+        "name": "Ручний режим"
+      },
+      "run": {
+        "name": "Працює"
+      },
+      "stop": {
+        "name": "Зупинено"
+      },
+      "test": {
+        "name": "Тестовий режим"
+      }
+    },
+    "button": {
+      "start": {
+        "name": "Запуск"
+      },
+      "stop": {
+        "name": "Зупинка"
+      },
+      "reset_alarm": {
+        "name": "Скидання аварії"
+      },
+      "restart": {
+        "name": "Перезавантаження"
+      }
+    }
+  }
+}

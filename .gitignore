@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Home Assistant
+*.log
+*.db
+*.db-shm
+*.db-wal
+home-assistant.log
+home-assistant_v2.db
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Configuration files with sensitive data
+secrets.yaml
+known_devices.yaml
+
+# Test files
+test_*.py

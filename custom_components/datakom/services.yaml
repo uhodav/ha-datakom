@@ -1,0 +1,4 @@
+update_devices:
+  name: Обновить список устройств
+  description: Подключается к Datakom WebSocket и обновляет список устройств
+  fields: {}

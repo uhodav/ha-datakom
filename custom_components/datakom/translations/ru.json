@@ -1,0 +1,292 @@
+{
+  "title": "Datakom API",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Шаг 1: Настройка API",
+        "description": "Введите URL API и интервал обновления.",
+        "data": {
+          "api_url": "URL API",
+          "update_interval": "Интервал обновления (минуты)"
+        },
+        "data_description": {
+          "api_url": "Базовый URL API, например https://example.com/datakom/api",
+          "update_interval": "Как часто обновлять данные (1-60 минут)"
+        }
+      },
+      "device": {
+        "title": "Шаг 2: Выбор устройства",
+        "description": "Выберите устройство для мониторинга.",
+        "data": {
+          "node_id": "Узел",
+          "device_id": "Устройство"
+        }
+      },
+      "params": {
+        "title": "Шаг 3: Выбор параметров",
+        "description": "Выберите параметры, для которых будут созданы сенсоры.",
+        "data": {
+          "param_ids": "Параметры"
+        }
+      }
+    },
+    "step1_user": "Настройка API (шаг {step})",
+    "step2_device_id": "Устройство (шаг {step})",
+    "step3_params": "Параметры (шаг {step})",
+    "error": {
+      "cannot_connect": "Ошибка подключения к API",
+      "invalid_auth": "Неверные учетные данные",
+      "unknown": "Неизвестная ошибка"
+    },
+    "abort": {
+      "already_configured": "Устройство уже настроено"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_voltage": {
+        "name": "Напряжение АКБ"
+      },
+      "battery_voltage1": {
+        "name": "Напряжение АКБ1"
+      },
+      "battery_voltage2": {
+        "name": "Напряжение АКБ2"
+      },
+      "engine_rpm": {
+        "name": "Обороты двигателя"
+      },
+      "engine_run_hours": {
+        "name": "Моточасы"
+      },
+      "engine_coolant_temp": {
+        "name": "Температура ОЖ"
+      },
+      "engine_oil_pressure": {
+        "name": "Давление масла"
+      },
+      "engine_oil_temp": {
+        "name": "Температура масла"
+      },
+      "engine_fuel_level": {
+        "name": "Уровень топлива"
+      },
+      "genset_l1": {
+        "name": "Генератор L1"
+      },
+      "genset_l2": {
+        "name": "Генератор L2"
+      },
+      "genset_l3": {
+        "name": "Генератор L3"
+      },
+      "genset_i1": {
+        "name": "Генератор I1"
+      },
+      "genset_i2": {
+        "name": "Генератор I2"
+      },
+      "genset_i3": {
+        "name": "Генератор I3"
+      },
+      "genset_freq": {
+        "name": "Частота генератора"
+      },
+      "genset_tot_active_pwr": {
+        "name": "Общая активная мощность"
+      },
+      "genset_tot_reactive_pwr": {
+        "name": "Общая реактивная мощность"
+      },
+      "avg_fuel_rate": {
+        "name": "Средний расход топлива"
+      },
+      "fuel_time_remaining": {
+        "name": "Остаток времени работы"
+      },
+      "specific_fuel_consumption": {
+        "name": "Удельный расход топлива"
+      },
+      "battery_health": {
+        "name": "Состояние батареи"
+      },
+      "genset_tot_apparent_pwr": {
+        "name": "Общая полная мощность"
+      },
+      "genset_pwr_factor": {
+        "name": "Коэффициент мощности"
+      },
+      "mains_l1": {
+        "name": "Сеть L1"
+      },
+      "mains_l2": {
+        "name": "Сеть L2"
+      },
+      "mains_l3": {
+        "name": "Сеть L3"
+      },
+      "mains_freq": {
+        "name": "Частота сети"
+      },
+      "genset_mode": {
+        "name": "Режим генератора",
+        "state": {
+          "stop": "Остановлен",
+          "auto": "Автоматический",
+          "manual": "Ручной",
+          "test": "Тестовый",
+          "auto_start": "Авто-запуск",
+          "remote": "Удаленный",
+          "schedule": "По расписанию",
+          "maintenance": "Техническое обслуживание",
+          "emergency": "Аварийный / Безопасный"
+        }
+      },
+      "genset_state": {
+        "name": "Состояние генератора",
+        "state": {
+          "at_rest": "Генератор в состоянии покоя",
+          "wait_before_fuel": "Ожидание перед подачей топлива",
+          "engine_preheat": "Прогрев двигателя",
+          "wait_oil_flash_off": "Ожидание воспламенения топлива",
+          "crank_rest": "Запуск в состоянии покоя",
+          "cranking": "Запуск",
+          "engine_run_idle": "Холостой ход двигателя",
+          "engine_heating": "Нагрев двигателя",
+          "running_off_load": "Работа без нагрузки",
+          "synchronizing_to_mains": "Синхронизация с сетью",
+          "load_transfer_to_genset": "Передача нагрузки к генератору",
+          "gen_cb_activation": "Активация CB генератора",
+          "genset_cb_timer": "Таймер CB генератора",
+          "master_genset_on_load": "Ведущий генератор под нагрузкой",
+          "peak_lopping": "Срезка пиковых нагрузок",
+          "power_exporting": "Экспорт энергии",
+          "slave_genset_on_load": "Ведомый генератор под нагрузкой",
+          "synchronizing_back_to_mains": "Синхронизация обратно с сетью",
+          "load_transfer_to_mains": "Передача нагрузки сети питания",
+          "mains_cb_activation": "Активация CB сети питания",
+          "mains_cb_timer": "Таймер CB сети",
+          "stop_with_cooldown": "Остановка с охлаждением",
+          "cooling_down": "Охлаждение",
+          "engine_stop_idle": "Остановка двигателя на холостом ходу",
+          "immediate_stop": "Немедленная остановка",
+          "engine_stopping": "Остановка двигателя"
+        }
+      },
+      "engine_state": {
+        "name": "Состояние двигателя",
+        "state": {
+          "off": "Выключен",
+          "cranking": "Прокрутка",
+          "running": "Работает",
+          "stopping": "Остановка",
+          "failed_start": "Ошибка запуска",
+          "stalled": "Заглох",
+          "oil_pressure_low": "Низкое давление масла",
+          "high_temperature": "Высокая температура",
+          "overspeed": "Превышение оборотов"
+        }
+      },
+      "breaker_state": {
+        "name": "Состояние выключателей",
+        "state": {
+          "both_open": "Оба разомкнуты",
+          "genset_closed": "Генератор подключен",
+          "mains_closed": "Сеть подключена",
+          "both_closed": "Оба замкнуты (авария)"
+        }
+      },
+      "mains_state": {
+        "name": "Состояние сети",
+        "state": {
+          "ok": "Сеть в норме",
+          "fail": "Сбой сети",
+          "restore_wait": "Ожидание восстановления",
+          "return_delay": "Задержка возврата",
+          "transfer_to_genset": "Переход на генератор",
+          "transfer_to_mains": "Переход на сеть"
+        }
+      },
+      "battery_state": {
+        "name": "Состояние батареи",
+        "state": {
+          "normal": "Норма",
+          "low": "Низкий заряд",
+          "critical": "Критический",
+          "disconnected": "Отключена",
+          "charging": "Зарядка"
+        }
+      },
+      "start_source": {
+        "name": "Источник запуска",
+        "state": {
+          "none": "Нет",
+          "manual": "Вручную",
+          "ats_mains_fail": "АВР/Сбой сети",
+          "remote": "Удаленный",
+          "schedule": "По расписанию",
+          "load_demand": "По нагрузке",
+          "test": "Тестовый"
+        }
+      },
+      "running_type": {
+        "name": "Тип работы",
+        "state": {
+          "no_load": "Без нагрузки",
+          "on_load": "Под нагрузкой",
+          "test": "Тестовый режим",
+          "maintenance": "Техобслуживание"
+        }
+      }
+    },
+    "binary_sensor": {
+      "api_connection": {
+        "name": "API соединение"
+      },
+      "alarm_shutdown": {
+        "name": "Авария - останов"
+      },
+      "alarm_warning": {
+        "name": "Авария - предупреждение"
+      },
+      "alarm_loaddump": {
+        "name": "Авария - сброс нагрузки"
+      },
+      "mains": {
+        "name": "Сеть"
+      },
+      "genset": {
+        "name": "Генератор"
+      },
+      "auto": {
+        "name": "Автоматический режим"
+      },
+      "manual": {
+        "name": "Ручной режим"
+      },
+      "run": {
+        "name": "Работает"
+      },
+      "stop": {
+        "name": "Остановлен"
+      },
+      "test": {
+        "name": "Тестовый режим"
+      }
+    },
+    "button": {
+      "start": {
+        "name": "Запуск"
+      },
+      "stop": {
+        "name": "Остановка"
+      },
+      "reset_alarm": {
+        "name": "Сброс аварии"
+      },
+      "restart": {
+        "name": "Перезагрузка"
+      }
+    }
+  }
+}
