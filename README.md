@@ -23,13 +23,13 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 ## Installation
 
 1. Copy the `custom_components/datakom` folder to your Home Assistant `custom_components` directory
-2. Copy the `www` folder contents to your Home Assistant `config/www/datakom/` directory
+2. Copy the `www/datakom` folder to your Home Assistant `config/www/` directory
 3. Restart Home Assistant
-4. Add the Lovelace resource:
+4. Add the Lovelace resources:
    - Go to **Settings → Dashboards → Resources → Add Resource**
-   - URL: `/local/datakom/datakom-controller-card.js`
-   - Resource type: **JavaScript Module**
-   - Click **Create**
+   - Add card: URL: `/local/datakom/datakom-controller-card.js`, Type: **JavaScript Module**
+   - Add editor: URL: `/local/datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
+   - Click **Create** for each
 5. Refresh your browser (Ctrl+F5)
 6. Go to **Settings → Devices & Services → Add Integration**
 7. Search for "Datakom API"
@@ -104,10 +104,10 @@ Parameters from the API are automatically converted to sensors:
 The integration includes a custom Datakom Controller Card that mimics the original D500 panel interface.
 
 ### Installation
-1. Copy `www` folder to `config/www/datakom/`
-2. Add resource: **Settings → Dashboards → Resources**
-   - URL: `/local/datakom/datakom-controller-card.js`
-   - Type: **JavaScript Module**
+1. Copy `www/datakom` folder to `config/www/datakom/`
+2. Add resources: **Settings → Dashboards → Resources**
+   - Card URL: `/local/datakom/datakom-controller-card.js`, Type: **JavaScript Module**
+   - Editor URL: `/local/datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
 3. Refresh browser (Ctrl+F5)
 
 ### Usage
@@ -169,7 +169,7 @@ control_buttons:
     indicator_color: green
 ```
 
-See [www/README.md](www/README.md) for detailed card configuration.
+See [www/datakom/README.md](www/datakom/README.md) for detailed card configuration.
 
 ## Example Dashboard
 
@@ -210,6 +210,12 @@ HA_datakom/
 │           ├── en.json           # English translations
 │           ├── ru.json           # Russian translations
 │           └── uk.json           # Ukrainian translations
+├── www/
+│   └── datakom/
+│       ├── datakom-controller-card.js        # Custom Lovelace card
+│       ├── datakom-controller-card-editor.js # Visual editor
+│       ├── README.md             # Card documentation
+│       └── img/                  # Button images
 ├── dashboard/
 │   └── dashboard_demo.yaml       # Example dashboard
 ├── configuration.yaml
@@ -252,13 +258,13 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 ## Встановлення
 
 1. Скопіюйте папку `custom_components/datakom` до директорії `custom_components` вашого Home Assistant
-2. Скопіюйте вміст папки `www` до `config/www/datakom/`
+2. Скопіюйте папку `www/datakom` до `config/www/` вашого Home Assistant
 3. Перезапустіть Home Assistant
-4. Додайте Lovelace ресурс:
+4. Додайте Lovelace ресурси:
    - Перейдіть до **Налаштування → Панелі → Ресурси → Додати ресурс**
-   - URL: `/local/datakom/datakom-controller-card.js`
-   - Тип ресурсу: **JavaScript Module**
-   - Натисніть **Створити**
+   - Додайте картку: URL: `/local/datakom/datakom-controller-card.js`, Тип: **JavaScript Module**
+   - Додайте редактор: URL: `/local/datakom/datakom-controller-card-editor.js`, Тип: **JavaScript Module**
+   - Натисніть **Створити** для кожного
 5. Оновіть браузер (Ctrl+F5)
 6. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
 7. Знайдіть "Datakom API"
@@ -367,6 +373,12 @@ HA_datakom/
 │           ├── en.json           # Англійські переклади
 │           ├── ru.json           # Російські переклади
 │           └── uk.json           # Українські переклади
+├── www/
+│   └── datakom/
+│       ├── datakom-controller-card.js        # Користувацька картка Lovelace
+│       ├── datakom-controller-card-editor.js # Візуальний редактор
+│       ├── README.md             # Документація картки
+│       └── img/                  # Зображення кнопок
 ├── dashboard/
 │   └── dashboard_demo.yaml       # Приклад панелі
 ├── configuration.yaml

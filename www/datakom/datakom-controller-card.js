@@ -37,14 +37,14 @@ class DatakomControllerCard extends HTMLElement {
           padding: 20px;
           box-shadow: 0 8px 24px rgba(0,0,0,0.4);
           font-family: 'Roboto', sans-serif;
+          container-type: inline-size;
         }
         
         .header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
-          padding: 0 10px;
+          margin-bottom: 14px;
         }
         
         .logo {
@@ -67,8 +67,8 @@ class DatakomControllerCard extends HTMLElement {
         
         .main-layout {
           display: grid;
-          grid-template-columns: 120px 1fr 100px;
-          gap: 20px;
+          grid-template-columns: minmax(74px, auto) 1fr minmax(74px, auto);
+          gap: 10px;
           margin-bottom: 20px;
         }
         
@@ -84,14 +84,13 @@ class DatakomControllerCard extends HTMLElement {
           font-weight: bold;
           text-transform: uppercase;
           letter-spacing: 1px;
-          margin-bottom: 8px;
           text-align: center;
         }
         
         .status-indicator {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 4px;
           padding: 6px 10px;
           background: rgba(255,255,255,0.05);
           border-radius: 4px;
@@ -129,8 +128,7 @@ class DatakomControllerCard extends HTMLElement {
           background: #e8e8e8;
           border: 4px solid #555;
           border-radius: 8px;
-          padding: 20px;
-          min-height: 200px;
+          padding: 10px;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -148,7 +146,6 @@ class DatakomControllerCard extends HTMLElement {
         .display-content {
           display: grid;
           gap: 3px;
-          padding: 0 20px;
         }
         
         .display-value {
@@ -176,7 +173,7 @@ class DatakomControllerCard extends HTMLElement {
         .side-indicators {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
           justify-content: flex-start;
           padding-top: 20px;
         }
@@ -299,6 +296,32 @@ class DatakomControllerCard extends HTMLElement {
         .btn-stop { background: #e74c3c; border-color: #c0392b; color: #fff; }
         .btn-run { background: #27ae60; border-color: #229954; color: #fff; }
         
+        /* Responsive styles */
+        @container (max-width: 400px) {
+          .button-circle {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+          }
+          
+          .button-label {
+            font-size: 11px;
+          }
+          
+          .button-indicator {
+            width: 12px;
+            height: 12px;
+            top: 2px;
+            right: 0px;
+          }
+        }
+        
+        @container (max-width: 300px) {
+          .control-button.hide-if-small {
+            display: none;
+          }
+        }
+        
         .error-message {
           color: #e74c3c;
           text-align: center;
@@ -317,13 +340,13 @@ class DatakomControllerCard extends HTMLElement {
         <div class="main-layout">
           <!-- Left: Status Indicators -->
           <div class="status-section">
-            <div class="status-title">STATUS</div>
+            <div class="status-title">${this.config.status_title || ''}</div>
             ${this.renderStatusIndicators()}
           </div>
           
           <!-- Center: Display -->
           <div class="display-section">
-            <div class="display-title">${this.config.display_title || 'GEN PHASE VOLTAGES'}</div>
+            <div class="display-title">${this.config.display_title || ''}</div>
             <div class="display-content" id="display-content">
               ${this.renderDisplayContent()}
             </div>
@@ -394,11 +417,18 @@ class DatakomControllerCard extends HTMLElement {
         buttonStyle = `data-image-on="${btn.image_on || ''}" data-image-off="${btn.image_off || ''}"`;
       }
       
+      // Добавляем класс для скрытия на малых экранах
+      const hideClass = btn.hide_if_small ? 'hide-if-small' : '';
+      
+      // Добавляем атрибут button_entity для вызова кнопки Home Assistant
+      const buttonEntityAttr = btn.button_entity ? `data-button-entity="${btn.button_entity}"` : '';
+      
       return `
-        <div class="control-button">
+        <div class="control-button ${hideClass}">
           <div class="button-circle ${btn.class || ''}" 
                data-action="${btn.action || ''}" 
                data-tap-action="${btn.tap_action || ''}"
+               ${buttonEntityAttr}
                ${buttonStyle}>
             ${iconContent}
             <div class="button-indicator ${btn.indicator_color || 'yellow'}" data-entity="${btn.indicator_entity || ''}"></div>
@@ -415,7 +445,16 @@ class DatakomControllerCard extends HTMLElement {
       button.addEventListener('click', (e) => {
         const action = e.currentTarget.getAttribute('data-action');
         const tapAction = e.currentTarget.getAttribute('data-tap-action');
-        if (tapAction) {
+        const buttonEntity = e.currentTarget.getAttribute('data-button-entity');
+        
+        // Если указан button_entity, вызываем сервис кнопки
+        if (buttonEntity && this._hass) {
+          this._hass.callService('button', 'press', {
+            entity_id: buttonEntity
+          });
+        } 
+        // Иначе используем старый способ с tap_action
+        else if (tapAction) {
           this.handleTapAction(JSON.parse(tapAction));
         }
       });
@@ -531,7 +570,8 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/datakom/img/test_on.png',
           image_off: '/local/community/datakom/img/test_off.png',
           indicator_entity: 'binary_sensor.test', 
-          indicator_color: 'yellow' 
+          indicator_color: 'yellow',
+          button_entity: 'button.datakom_device_control_test'
         },
         { 
           action: 'auto', 
@@ -541,7 +581,8 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/datakom/img/auto_on.png',
           image_off: '/local/community/datakom/img/auto_off.png',
           indicator_entity: 'binary_sensor.auto', 
-          indicator_color: 'green' 
+          indicator_color: 'green',
+          button_entity: 'button.datakom_device_control_auto'
         },
         { 
           action: 'manual', 
@@ -551,7 +592,8 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/datakom/img/manual_on.png',
           image_off: '/local/community/datakom/img/manual_off.png',
           indicator_entity: 'binary_sensor.manual', 
-          indicator_color: 'yellow' 
+          indicator_color: 'yellow',
+          button_entity: 'button.datakom_device_control_manual'
         },
         { 
           action: 'stop', 
@@ -561,7 +603,8 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/datakom/img/stop_on.png',
           image_off: '/local/community/datakom/img/stop_off.png',
           indicator_entity: 'binary_sensor.stop', 
-          indicator_color: 'red' 
+          indicator_color: 'red',
+          button_entity: 'button.datakom_device_control_stop'
         },
         { 
           action: 'run', 
@@ -571,7 +614,8 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/datakom/img/run_on.png',
           image_off: '/local/community/datakom/img/run_off.png',
           indicator_entity: 'binary_sensor.run', 
-          indicator_color: 'green' 
+          indicator_color: 'green',
+          button_entity: 'button.datakom_device_control_run'
         }
       ]
     };

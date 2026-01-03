@@ -237,6 +237,9 @@
           "test": "Test Run",
           "maintenance": "Maintenance Run"
         }
+      },
+      "digital_outputs": {
+        "name": "Digital Outputs"
       }
     },
     "binary_sensor": {
@@ -286,6 +289,21 @@
       },
       "restart": {
         "name": "Restart"
+      },
+      "control_run": {
+        "name": "Run"
+      },
+      "control_auto": {
+        "name": "Auto"
+      },
+      "control_manual": {
+        "name": "Manual"
+      },
+      "control_test": {
+        "name": "Test"
+      },
+      "control_stop": {
+        "name": "Stop"
       }
     }
   }

@@ -237,6 +237,9 @@
           "test": "Тестовий режим",
           "maintenance": "Техобслуговування"
         }
+      },
+      "digital_outputs": {
+        "name": "Цифрові виходи"
       }
     },
     "binary_sensor": {
@@ -286,6 +289,21 @@
       },
       "restart": {
         "name": "Перезавантаження"
+      },
+      "control_run": {
+        "name": "Пуск"
+      },
+      "control_auto": {
+        "name": "Авто"
+      },
+      "control_manual": {
+        "name": "Ручний"
+      },
+      "control_test": {
+        "name": "Тест"
+      },
+      "control_stop": {
+        "name": "Стоп"
       }
     }
   }

@@ -198,6 +198,11 @@ async def async_setup_entry(
         sensors.append(sensor)
         _LOGGER.debug(f"Datakom: Created sensor {sensor.unique_id} for param {pid}")
     
+    # Добавляем сенсор цифровых выходов
+    dout_sensor = DatakomDigitalOutputsSensor(api_url, node_id, device_id, device_name, update_interval)
+    sensors.append(dout_sensor)
+    _LOGGER.debug(f"Datakom: Created digital outputs sensor {dout_sensor.unique_id}")
+    
     if sensors:
         _LOGGER.info(f"Datakom: Adding {len(sensors)} sensors")
         async_add_entities(sensors, True)
@@ -396,3 +401,93 @@ class DatakomParamSensor(SensorEntity):
         """Вызывается когда сенсор добавлен в Home Assistant."""
         await super().async_added_to_hass()
         self._hass = self.hass
+
+
+class DatakomDigitalOutputsSensor(SensorEntity):
+    """Сенсор для цифровых выходов Datakom."""
+
+    def __init__(self, api_url, node_id, device_id, device_name, update_interval):
+        self._api_url = api_url
+        self._node_id = node_id
+        self._device_id = device_id
+        self._device_name = device_name
+        self._attr_name = "Digital Outputs"
+        self._attr_unique_id = f"datakom_{node_id}_{device_id}_digital_outputs"
+        self._attr_translation_key = "digital_outputs"
+        self._state = None
+        self._dout = []
+        self._update_interval = update_interval
+        self._attr_should_poll = True
+        self._attr_icon = "mdi:electric-switch"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def scan_interval(self) -> timedelta:
+        """Return the scan interval in minutes."""
+        return timedelta(minutes=self._update_interval)
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, str(self._device_id))},
+            "name": self._device_name,
+            "manufacturer": "Datakom",
+            "model": "Device",
+        }
+
+    @property
+    def name(self) -> str:
+        return self._attr_name
+
+    @property
+    def unique_id(self) -> str:
+        return self._attr_unique_id
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def icon(self) -> str:
+        return self._attr_icon
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Возвращаем массив dout как атрибуты."""
+        attrs = {
+            "unique_id": self._attr_unique_id,
+            "device_id": self._device_id,
+            "device_name": self._device_name,
+            "description": "Digital outputs status",
+        }
+        
+        # Добавляем каждый выход как отдельный атрибут
+        if self._dout:
+            attrs["dout"] = self._dout
+            for i, value in enumerate(self._dout):
+                attrs[f"dout_{i}"] = value
+        
+        return attrs
+
+    async def async_update(self) -> None:
+        """Запрос к /api/dump_devm_dout?did=...&node_id=..."""
+        url = f"{self._api_url}/dump_devm_dout?did={self._device_id}&node_id={self._node_id}"
+        _LOGGER.debug(f"Datakom: requesting digital outputs from {url}")
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, timeout=15) as resp:
+                    text = await resp.text()
+                    _LOGGER.debug(f"Datakom: digital outputs response: {text}")
+                    data = await resp.json()
+                    if data.get("success") and "dout" in data:
+                        self._dout = data["dout"]
+                        # State = количество активных выходов
+                        self._state = sum(1 for x in self._dout if x == 1)
+                    else:
+                        error_msg = data.get("error", "")
+                        if "No dump_devm_dout data available" in error_msg:
+                            _LOGGER.debug(f"Datakom: digital outputs temporarily unavailable: {error_msg}")
+                        else:
+                            _LOGGER.warning(f"Datakom: digital outputs failed, response: {data}")
+            except Exception as e:
+                _LOGGER.error(f"Datakom: digital outputs sensor {self._attr_unique_id} update error: {e}")

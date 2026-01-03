@@ -1,328 +1,588 @@
 class DatakomControllerCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._debounceTimers = {};
+  }
+
   setConfig(config) {
-    this._config = config;
+    this._config = { ...config };
+    // Initialize arrays if not present
+    if (!this._config.status_indicators) this._config.status_indicators = [];
+    if (!this._config.display_values) this._config.display_values = [];
+    if (!this._config.side_indicators) this._config.side_indicators = [];
+    if (!this._config.control_buttons) this._config.control_buttons = [];
     this.render();
   }
 
   set hass(hass) {
     this._hass = hass;
+    // Only render if config exists and hass wasn't set before
+    if (this._config && !this._hassSet) {
+      this._hassSet = true;
+      this.render();
+    }
+  }
+
+  configChanged(newConfig) {
+    const event = new Event('config-changed', {
+      bubbles: true,
+      composed: true,
+    });
+    event.detail = { config: newConfig };
+    this.dispatchEvent(event);
   }
 
   render() {
     if (!this._config) return;
 
-    this.innerHTML = `
+    // Save scroll position before re-render
+    const scrollContainer = this.shadowRoot.querySelector('.card-config');
+    const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+
+    this.shadowRoot.innerHTML = `
       <style>
-        .editor-container {
+        .card-config {
           padding: 16px;
         }
-        .section {
-          margin-bottom: 24px;
-        }
-        .section-title {
-          font-weight: 500;
-          margin-bottom: 12px;
-          color: var(--primary-text-color);
-        }
-        .input-group {
+        
+        .option {
           margin-bottom: 16px;
         }
-        .input-label {
+        
+        .option label {
           display: block;
           margin-bottom: 4px;
-          font-size: 14px;
-          color: var(--secondary-text-color);
+          font-weight: 500;
+          color: var(--primary-text-color);
         }
-        ha-textfield {
+        
+        .option input, .option select {
           width: 100%;
+          padding: 8px;
+          border: 1px solid var(--divider-color);
+          border-radius: 4px;
+          background: var(--primary-background-color);
+          color: var(--primary-text-color);
+          box-sizing: border-box;
         }
-        .add-button {
-          margin-top: 8px;
+        
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: var(--primary-text-color);
+          margin: 24px 0 12px 0;
+          padding-bottom: 8px;
+          border-bottom: 2px solid var(--divider-color);
         }
-        .item-editor {
+        
+        .array-item {
           background: var(--secondary-background-color);
           padding: 12px;
           margin-bottom: 8px;
           border-radius: 4px;
-          position: relative;
+          border: 1px solid var(--divider-color);
         }
-        .remove-button {
-          position: absolute;
-          top: 8px;
-          right: 8px;
+        
+        .array-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        
+        .array-item-title {
+          font-weight: 500;
+          color: var(--primary-text-color);
+        }
+        
+        .btn {
+          padding: 6px 12px;
+          border: none;
+          border-radius: 4px;
           cursor: pointer;
-          color: var(--error-color);
+          font-size: 14px;
+          transition: all 0.2s;
+        }
+        
+        .btn-add {
+          background: var(--primary-color);
+          color: white;
+          margin-top: 8px;
+        }
+        
+        .btn-add:hover {
+          opacity: 0.8;
+        }
+        
+        .btn-remove {
+          background: var(--error-color);
+          color: white;
+          font-size: 12px;
+          padding: 4px 8px;
+        }
+        
+        .btn-remove:hover {
+          opacity: 0.8;
+        }
+        
+        .hint {
+          font-size: 12px;
+          color: var(--secondary-text-color);
+          margin-top: 4px;
+        }
+        
+        .grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
         }
       </style>
-
-      <div class="editor-container">
-        <!-- Basic Settings -->
-        <div class="section">
-          <div class="section-title">Основные настройки</div>
-          <div class="input-group">
-            <label class="input-label">Модель контроллера</label>
-            <ha-textfield
-              .value="${this._config.model || 'D 500'}"
-              @input="${(e) => this._valueChanged('model', e.target.value)}"
-            ></ha-textfield>
-          </div>
-          <div class="input-group">
-            <label class="input-label">Заголовок дисплея</label>
-            <ha-textfield
-              .value="${this._config.display_title || 'GEN PHASE VOLTAGES'}"
-              @input="${(e) => this._valueChanged('display_title', e.target.value)}"
-            ></ha-textfield>
-          </div>
+      
+      <div class="card-config">
+        <div class="section-title">Загальні налаштування / General Settings</div>
+        
+        <div class="option">
+          <label>Model / Модель</label>
+          <input 
+            type="text" 
+            id="model" 
+            value="${this._config.model || 'D 500'}"
+            placeholder="D-500 MK3"
+          />
+          <div class="hint">Назва моделі контролера / Controller model name</div>
         </div>
-
-        <!-- Status Indicators -->
-        <div class="section">
-          <div class="section-title">Статусные индикаторы (слева)</div>
-          <div id="status-indicators">
-            ${this.renderStatusIndicatorsEditor()}
-          </div>
-          <mwc-button class="add-button" @click="${() => this.addStatusIndicator()}">
-            Добавить индикатор
-          </mwc-button>
+        
+        <div class="option">
+          <label>Display Title / Заголовок дисплею</label>
+          <input 
+            type="text" 
+            id="display_title" 
+            value="${this._config.display_title || 'GEN PHASE VOLTAGES'}"
+            placeholder="State / Властивості"
+          />
+          <div class="hint">Текст над дисплеєм / Text above display section</div>
         </div>
-
-        <!-- Display Values -->
-        <div class="section">
-          <div class="section-title">Значения на дисплее</div>
-          <div id="display-values">
-            ${this.renderDisplayValuesEditor()}
-          </div>
-          <mwc-button class="add-button" @click="${() => this.addDisplayValue()}">
-            Добавить значение
-          </mwc-button>
-        </div>
-
-        <!-- Side Indicators -->
-        <div class="section">
-          <div class="section-title">Боковые индикаторы (справа)</div>
-          <div id="side-indicators">
-            ${this.renderSideIndicatorsEditor()}
-          </div>
-          <mwc-button class="add-button" @click="${() => this.addSideIndicator()}">
-            Добавить индикатор
-          </mwc-button>
-        </div>
-
-        <!-- Control Buttons -->
-        <div class="section">
-          <div class="section-title">Кнопки управления</div>
-          <div id="control-buttons">
-            ${this.renderControlButtonsEditor()}
-          </div>
-        </div>
+        
+        <div class="section-title">Status Indicators / Індикатори стану (ліва панель)</div>
+        <div id="status-indicators-container"></div>
+        <button class="btn btn-add" id="add-status-indicator">+ Add Status Indicator</button>
+        
+        <div class="section-title">Display Values / Значення дисплею (центр)</div>
+        <div id="display-values-container"></div>
+        <button class="btn btn-add" id="add-display-value">+ Add Display Value</button>
+        
+        <div class="section-title">Side Indicators / Бічні індикатори (права панель)</div>
+        <div id="side-indicators-container"></div>
+        <button class="btn btn-add" id="add-side-indicator">+ Add Side Indicator</button>
+        
+        <div class="section-title">Control Buttons / Кнопки керування</div>
+        <div id="control-buttons-container"></div>
+        <button class="btn btn-add" id="add-control-button">+ Add Control Button</button>
       </div>
     `;
-  }
 
-  renderStatusIndicatorsEditor() {
-    const indicators = this._config.status_indicators || [];
-    return indicators.map((indicator, index) => `
-      <div class="item-editor">
-        <span class="remove-button" data-index="${index}" data-type="status">×</span>
-        <div class="input-group">
-          <label class="input-label">Метка</label>
-          <ha-textfield
-            .value="${indicator.label || ''}"
-            @input="${(e) => this.updateStatusIndicator(index, 'label', e.target.value)}"
-          ></ha-textfield>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Сенсор (entity)</label>
-          <ha-entity-picker
-            .hass="${this._hass}"
-            .value="${indicator.entity || ''}"
-            @value-changed="${(e) => this.updateStatusIndicator(index, 'entity', e.detail.value)}"
-          ></ha-entity-picker>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Цвет LED</label>
-          <ha-select
-            .value="${indicator.color || 'red'}"
-            @selected="${(e) => this.updateStatusIndicator(index, 'color', e.target.value)}"
-          >
-            <mwc-list-item value="red">Красный</mwc-list-item>
-            <mwc-list-item value="green">Зеленый</mwc-list-item>
-            <mwc-list-item value="yellow">Желтый</mwc-list-item>
-          </ha-select>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  renderDisplayValuesEditor() {
-    const values = this._config.display_values || [];
-    return values.map((value, index) => `
-      <div class="item-editor">
-        <span class="remove-button" data-index="${index}" data-type="display">×</span>
-        <div class="input-group">
-          <label class="input-label">Метка</label>
-          <ha-textfield
-            .value="${value.label || ''}"
-            @input="${(e) => this.updateDisplayValue(index, 'label', e.target.value)}"
-          ></ha-textfield>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Сенсор (entity)</label>
-          <ha-entity-picker
-            .hass="${this._hass}"
-            .value="${value.entity || ''}"
-            @value-changed="${(e) => this.updateDisplayValue(index, 'entity', e.detail.value)}"
-          ></ha-entity-picker>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  renderSideIndicatorsEditor() {
-    const indicators = this._config.side_indicators || [];
-    return indicators.map((indicator, index) => `
-      <div class="item-editor">
-        <span class="remove-button" data-index="${index}" data-type="side">×</span>
-        <div class="input-group">
-          <label class="input-label">Метка</label>
-          <ha-textfield
-            .value="${indicator.label || ''}"
-            @input="${(e) => this.updateSideIndicator(index, 'label', e.target.value)}"
-          ></ha-textfield>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Сенсор (entity)</label>
-          <ha-entity-picker
-            .hass="${this._hass}"
-            .value="${indicator.entity || ''}"
-            @value-changed="${(e) => this.updateSideIndicator(index, 'entity', e.detail.value)}"
-          ></ha-entity-picker>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Цвет LED</label>
-          <ha-select
-            .value="${indicator.color || 'green'}"
-            @selected="${(e) => this.updateSideIndicator(index, 'color', e.target.value)}"
-          >
-            <mwc-list-item value="red">Красный</mwc-list-item>
-            <mwc-list-item value="green">Зеленый</mwc-list-item>
-            <mwc-list-item value="yellow">Желтый</mwc-list-item>
-          </ha-select>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  renderControlButtonsEditor() {
-    const buttons = this._config.control_buttons || [];
-    return buttons.map((button, index) => `
-      <div class="item-editor">
-        <div class="input-group">
-          <label class="input-label">Метка: ${button.label || ''}</label>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Сенсор индикатора</label>
-          <ha-entity-picker
-            .hass="${this._hass}"
-            .value="${button.indicator_entity || ''}"
-            @value-changed="${(e) => this.updateControlButton(index, 'indicator_entity', e.detail.value)}"
-          ></ha-entity-picker>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Цвет индикатора</label>
-          <ha-select
-            .value="${button.indicator_color || 'yellow'}"
-            @selected="${(e) => this.updateControlButton(index, 'indicator_color', e.target.value)}"
-          >
-            <mwc-list-item value="red">Красный</mwc-list-item>
-            <mwc-list-item value="green">Зеленый</mwc-list-item>
-            <mwc-list-item value="yellow">Желтый</mwc-list-item>
-          </ha-select>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Действие (tap_action JSON)</label>
-          <ha-textfield
-            .value="${button.tap_action ? JSON.stringify(button.tap_action) : ''}"
-            @input="${(e) => this.updateControlButton(index, 'tap_action', e.target.value)}"
-          ></ha-textfield>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  _valueChanged(key, value) {
-    if (!this._config) return;
-    this._config = { ...this._config, [key]: value };
-    this.dispatchConfigChanged();
-  }
-
-  updateStatusIndicator(index, key, value) {
-    const indicators = [...(this._config.status_indicators || [])];
-    indicators[index] = { ...indicators[index], [key]: value };
-    this._config = { ...this._config, status_indicators: indicators };
-    this.dispatchConfigChanged();
-  }
-
-  updateDisplayValue(index, key, value) {
-    const values = [...(this._config.display_values || [])];
-    values[index] = { ...values[index], [key]: value };
-    this._config = { ...this._config, display_values: values };
-    this.dispatchConfigChanged();
-  }
-
-  updateSideIndicator(index, key, value) {
-    const indicators = [...(this._config.side_indicators || [])];
-    indicators[index] = { ...indicators[index], [key]: value };
-    this._config = { ...this._config, side_indicators: indicators };
-    this.dispatchConfigChanged();
-  }
-
-  updateControlButton(index, key, value) {
-    const buttons = [...(this._config.control_buttons || [])];
-    if (key === 'tap_action') {
-      try {
-        buttons[index] = { ...buttons[index], [key]: JSON.parse(value) };
-      } catch (e) {
-        return;
+    this.renderStatusIndicators();
+    this.renderDisplayValues();
+    this.renderSideIndicators();
+    this.renderControlButtons();
+    this.setupEntityPickers();
+    this.attachEventListeners();
+    
+    // Restore scroll position after re-render
+    requestAnimationFrame(() => {
+      const newScrollContainer = this.shadowRoot.querySelector('.card-config');
+      if (newScrollContainer && scrollTop > 0) {
+        newScrollContainer.scrollTop = scrollTop;
       }
-    } else {
-      buttons[index] = { ...buttons[index], [key]: value };
-    }
-    this._config = { ...this._config, control_buttons: buttons };
-    this.dispatchConfigChanged();
-  }
-
-  addStatusIndicator() {
-    const indicators = [...(this._config.status_indicators || [])];
-    indicators.push({ label: '', entity: '', color: 'red' });
-    this._config = { ...this._config, status_indicators: indicators };
-    this.dispatchConfigChanged();
-    this.render();
-  }
-
-  addDisplayValue() {
-    const values = [...(this._config.display_values || [])];
-    values.push({ label: '', entity: '' });
-    this._config = { ...this._config, display_values: values };
-    this.dispatchConfigChanged();
-    this.render();
-  }
-
-  addSideIndicator() {
-    const indicators = [...(this._config.side_indicators || [])];
-    indicators.push({ label: '', entity: '', color: 'green' });
-    this._config = { ...this._config, side_indicators: indicators };
-    this.dispatchConfigChanged();
-    this.render();
-  }
-
-  dispatchConfigChanged() {
-    const event = new CustomEvent('config-changed', {
-      detail: { config: this._config },
-      bubbles: true,
-      composed: true,
     });
-    this.dispatchEvent(event);
+  }
+
+  setupEntityPickers() {
+    // Set hass for all ha-entity-picker elements
+    if (this._hass) {
+      this.shadowRoot.querySelectorAll('ha-entity-picker').forEach(picker => {
+        picker.hass = this._hass;
+      });
+    }
+  }
+
+  renderStatusIndicators() {
+    const container = this.shadowRoot.getElementById('status-indicators-container');
+    const indicators = this._config.status_indicators || [];
+    
+    container.innerHTML = indicators.map((indicator, index) => `
+      <div class="array-item">
+        <div class="array-item-header">
+          <span class="array-item-title">Indicator ${index + 1}</span>
+          <button class="btn btn-remove" data-type="status" data-index="${index}">Remove</button>
+        </div>
+        <div class="option">
+          <label>Label</label>
+          <input type="text" data-type="status" data-index="${index}" data-field="label" value="${indicator.label || ''}" />
+        </div>
+        <div class="grid-2">
+          <div class="option">
+            <label>Color</label>
+            <select data-type="status" data-index="${index}" data-field="color">
+              <option value="green" ${indicator.color === 'green' ? 'selected' : ''}>Green</option>
+              <option value="red" ${indicator.color === 'red' ? 'selected' : ''}>Red</option>
+              <option value="yellow" ${indicator.color === 'yellow' ? 'selected' : ''}>Yellow</option>
+            </select>
+          </div>
+          <div class="option">
+            <label>Entity</label>
+            <ha-entity-picker
+              data-type="status"
+              data-index="${index}"
+              data-field="entity"
+              .value="${indicator.entity || ''}"
+              .includeDomains='["binary_sensor"]'
+              allow-custom-entity
+            ></ha-entity-picker>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  renderDisplayValues() {
+    const container = this.shadowRoot.getElementById('display-values-container');
+    const values = this._config.display_values || [];
+    
+    container.innerHTML = values.map((value, index) => `
+      <div class="array-item">
+        <div class="array-item-header">
+          <span class="array-item-title">Display Value ${index + 1}</span>
+          <button class="btn btn-remove" data-type="display" data-index="${index}">Remove</button>
+        </div>
+        <div class="grid-2">
+          <div class="option">
+            <label>Label</label>
+            <input type="text" data-type="display" data-index="${index}" data-field="label" value="${value.label || ''}" placeholder="Fuel" />
+          </div>
+          <div class="option">
+            <label>Entity</label>
+            <ha-entity-picker
+              data-type="display"
+              data-index="${index}"
+              data-field="entity"
+              .value="${value.entity || ''}"
+              .includeDomains='["sensor"]'
+              allow-custom-entity
+            ></ha-entity-picker>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  renderSideIndicators() {
+    const container = this.shadowRoot.getElementById('side-indicators-container');
+    const indicators = this._config.side_indicators || [];
+    
+    container.innerHTML = indicators.map((indicator, index) => `
+      <div class="array-item">
+        <div class="array-item-header">
+          <span class="array-item-title">Side Indicator ${index + 1}</span>
+          <button class="btn btn-remove" data-type="side" data-index="${index}">Remove</button>
+        </div>
+        <div class="option">
+          <label>Label</label>
+          <input type="text" data-type="side" data-index="${index}" data-field="label" value="${indicator.label || ''}" />
+        </div>
+        <div class="grid-2">
+          <div class="option">
+            <label>Color</label>
+            <select data-type="side" data-index="${index}" data-field="color">
+              <option value="green" ${indicator.color === 'green' ? 'selected' : ''}>Green</option>
+              <option value="red" ${indicator.color === 'red' ? 'selected' : ''}>Red</option>
+              <option value="yellow" ${indicator.color === 'yellow' ? 'selected' : ''}>Yellow</option>
+            </select>
+          </div>
+          <div class="option">
+            <label>Entity</label>
+            <ha-entity-picker
+              data-type="side"
+              data-index="${index}"
+              data-field="entity"
+              .value="${indicator.entity || ''}"
+              .includeDomains='["binary_sensor"]'
+              allow-custom-entity
+            ></ha-entity-picker>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  renderControlButtons() {
+    const container = this.shadowRoot.getElementById('control-buttons-container');
+    const buttons = this._config.control_buttons || [];
+    
+    container.innerHTML = buttons.map((button, index) => `
+      <div class="array-item">
+        <div class="array-item-header">
+          <span class="array-item-title">Button ${index + 1}: ${button.label || ''}</span>
+          <button class="btn btn-remove" data-type="button" data-index="${index}">Remove</button>
+        </div>
+        <div class="grid-2">
+          <div class="option">
+            <label>Label</label>
+            <input type="text" data-type="button" data-index="${index}" data-field="label" value="${button.label || ''}" placeholder="AUTO" />
+          </div>
+          <div class="option">
+            <label>Action</label>
+            <input type="text" data-type="button" data-index="${index}" data-field="action" value="${button.action || ''}" placeholder="auto" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="option">
+            <label>Class</label>
+            <input type="text" data-type="button" data-index="${index}" data-field="class" value="${button.class || ''}" placeholder="btn-auto" />
+          </div>
+          <div class="option">
+            <label>Icon</label>
+            <input type="text" data-type="button" data-index="${index}" data-field="icon" value="${button.icon || ''}" placeholder="🔧" />
+          </div>
+        </div>
+        <div class="option">
+          <label>Image ON (active state)</label>
+          <input type="text" data-type="button" data-index="${index}" data-field="image_on" value="${button.image_on || ''}" placeholder="/local/community/datakom/img/auto-k.png" />
+        </div>
+        <div class="option">
+          <label>Image OFF (inactive state)</label>
+          <input type="text" data-type="button" data-index="${index}" data-field="image_off" value="${button.image_off || ''}" placeholder="/local/community/datakom/img/auto.png" />
+        </div>
+        <div class="grid-2">
+          <div class="option">
+            <label>Indicator Entity</label>
+            <ha-entity-picker
+              data-type="button"
+              data-index="${index}"
+              data-field="indicator_entity"
+              .value="${button.indicator_entity || ''}"
+              .includeDomains='["binary_sensor"]'
+              allow-custom-entity
+            ></ha-entity-picker>
+          </div>
+          <div class="option">
+            <label>Indicator Color</label>
+            <select data-type="button" data-index="${index}" data-field="indicator_color">
+              <option value="green" ${button.indicator_color === 'green' ? 'selected' : ''}>Green</option>
+              <option value="red" ${button.indicator_color === 'red' ? 'selected' : ''}>Red</option>
+              <option value="yellow" ${button.indicator_color === 'yellow' ? 'selected' : ''}>Yellow</option>
+            </select>
+          </div>
+        </div>
+        <div class="option">
+          <label>Button Entity (для управления)</label>
+          <ha-entity-picker
+            data-type="button"
+            data-index="${index}"
+            data-field="button_entity"
+            .value="${button.button_entity || ''}"
+            .includeDomains='["button"]'
+            allow-custom-entity
+          ></ha-entity-picker>
+        </div>
+        <div class="option" style="display: flex; gap: 8px;">
+          <div>
+            <input type="checkbox" data-type="button" data-index="${index}" data-field="hide_if_small" ${button.hide_if_small ? 'checked' : ''} />
+          </div>
+          <span>Hide on small</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  attachEventListeners() {
+    // Model and display title
+    const modelInput = this.shadowRoot.getElementById('model');
+    if (modelInput) {
+      modelInput.addEventListener('input', (e) => {
+        this._config.model = e.target.value;
+        clearTimeout(this._debounceTimers['model']);
+        this._debounceTimers['model'] = setTimeout(() => {
+          this.configChanged(this._config);
+        }, 500);
+      });
+      modelInput.addEventListener('blur', () => {
+        clearTimeout(this._debounceTimers['model']);
+        this.configChanged(this._config);
+      });
+    }
+
+    const displayTitleInput = this.shadowRoot.getElementById('display_title');
+    if (displayTitleInput) {
+      displayTitleInput.addEventListener('input', (e) => {
+        this._config.display_title = e.target.value;
+        clearTimeout(this._debounceTimers['display_title']);
+        this._debounceTimers['display_title'] = setTimeout(() => {
+          this.configChanged(this._config);
+        }, 500);
+      });
+      displayTitleInput.addEventListener('blur', () => {
+        clearTimeout(this._debounceTimers['display_title']);
+        this.configChanged(this._config);
+      });
+    }
+
+    // Add buttons
+    this.shadowRoot.getElementById('add-status-indicator')?.addEventListener('click', () => {
+      if (!this._config.status_indicators) this._config.status_indicators = [];
+      this._config.status_indicators.push({ label: 'New Indicator', color: 'green', entity: '' });
+      this.configChanged(this._config);
+      this.render();
+    });
+
+    this.shadowRoot.getElementById('add-display-value')?.addEventListener('click', () => {
+      if (!this._config.display_values) this._config.display_values = [];
+      this._config.display_values.push({ label: 'Value', entity: '' });
+      this.configChanged(this._config);
+      this.render();
+    });
+
+    this.shadowRoot.getElementById('add-side-indicator')?.addEventListener('click', () => {
+      if (!this._config.side_indicators) this._config.side_indicators = [];
+      this._config.side_indicators.push({ label: 'Indicator', color: 'green', entity: '' });
+      this.configChanged(this._config);
+      this.render();
+    });
+
+    this.shadowRoot.getElementById('add-control-button')?.addEventListener('click', () => {
+      if (!this._config.control_buttons) this._config.control_buttons = [];
+      this._config.control_buttons.push({
+        action: 'action',
+        label: 'BUTTON',
+        class: 'btn-auto',
+        icon: '⚙',
+        indicator_entity: '',
+        indicator_color: 'yellow'
+      });
+      this.configChanged(this._config);
+      this.render();
+    });
+
+    // Array item inputs
+    this.shadowRoot.querySelectorAll('input[data-type], select[data-type]').forEach(input => {
+      const eventType = input.type === 'checkbox' ? 'change' : 'input';
+      input.addEventListener(eventType, (e) => {
+        const type = e.target.dataset.type;
+        const index = parseInt(e.target.dataset.index);
+        const field = e.target.dataset.field;
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+
+        let array;
+        switch (type) {
+          case 'status':
+            array = this._config.status_indicators;
+            break;
+          case 'display':
+            array = this._config.display_values;
+            break;
+          case 'side':
+            array = this._config.side_indicators;
+            break;
+          case 'button':
+            array = this._config.control_buttons;
+            break;
+        }
+
+        if (array && array[index]) {
+          array[index][field] = value;
+          
+          // Update item title if label field changed, without full re-render
+          if (field === 'label' && type === 'button') {
+            const itemHeader = e.target.closest('.array-item')?.querySelector('.array-item-title');
+            if (itemHeader) {
+              itemHeader.textContent = `Button ${index + 1}: ${value}`;
+            }
+          }
+          
+          // For text inputs, use debounce to avoid frequent config changes
+          if (e.target.type === 'text') {
+            const timerId = `${type}-${index}-${field}`;
+            clearTimeout(this._debounceTimers[timerId]);
+            this._debounceTimers[timerId] = setTimeout(() => {
+              this.configChanged(this._config);
+            }, 500);
+          } else {
+            // For selects and checkboxes, fire immediately
+            this.configChanged(this._config);
+          }
+        }
+      });
+      
+      // Also fire on blur for text inputs to save immediately when leaving the field
+      if (input.type === 'text') {
+        input.addEventListener('blur', (e) => {
+          const type = e.target.dataset.type;
+          const index = e.target.dataset.index;
+          const field = e.target.dataset.field;
+          const timerId = `${type}-${index}-${field}`;
+          clearTimeout(this._debounceTimers[timerId]);
+          this.configChanged(this._config);
+        });
+      }
+    });
+
+    // Entity picker value-changed events
+    this.shadowRoot.querySelectorAll('ha-entity-picker').forEach(picker => {
+      picker.addEventListener('value-changed', (e) => {
+        const type = e.target.dataset.type;
+        const index = parseInt(e.target.dataset.index);
+        const field = e.target.dataset.field;
+        const value = e.detail.value;
+
+        let array;
+        switch (type) {
+          case 'status':
+            array = this._config.status_indicators;
+            break;
+          case 'display':
+            array = this._config.display_values;
+            break;
+          case 'side':
+            array = this._config.side_indicators;
+            break;
+          case 'button':
+            array = this._config.control_buttons;
+            break;
+        }
+
+        if (array && array[index]) {
+          array[index][field] = value;
+          this.configChanged(this._config);
+        }
+      });
+    });
+
+    // Remove buttons
+    this.shadowRoot.querySelectorAll('.btn-remove').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const type = e.target.dataset.type;
+        const index = parseInt(e.target.dataset.index);
+
+        switch (type) {
+          case 'status':
+            this._config.status_indicators.splice(index, 1);
+            break;
+          case 'display':
+            this._config.display_values.splice(index, 1);
+            break;
+          case 'side':
+            this._config.side_indicators.splice(index, 1);
+            break;
+          case 'button':
+            this._config.control_buttons.splice(index, 1);
+            break;
+        }
+
+        this.configChanged(this._config);
+        this.render();
+      });
+    });
   }
 }
 
