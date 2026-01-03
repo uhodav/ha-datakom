@@ -86,6 +86,7 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
         self._node_id = node_id
         self._device_id = device_id
         self._device_name = device_name
+        self._attr_has_entity_name = True
         self._attr_name = "API Connection"
         self._attr_unique_id = f"datakom_{node_id}_{device_id}_health"
         self._attr_translation_key = "api_connection"
@@ -162,6 +163,7 @@ class DatakomLedBinarySensor(BinarySensorEntity):
         self._device_id = device_id
         self._led_name = led_name
         self._device_name = device_name
+        self._attr_has_entity_name = True
         self._attr_name = f"{led_name}"
         self._attr_unique_id = f"datakom_{node_id}_{device_id}_led_{led_name.lower()}"
         # Устанавливаем translation_key для известных LED
@@ -242,6 +244,7 @@ class DatakomAlarmBinarySensor(BinarySensorEntity):
         self._device_id = device_id
         self._alarm_type = alarm_type
         self._device_name = device_name
+        self._attr_has_entity_name = True
         self._attr_name = f"Alarm {alarm_type}"
         self._attr_unique_id = f"datakom_{node_id}_{device_id}_alarm_{alarm_type.lower()}"
         # Устанавливаем translation_key для аларма

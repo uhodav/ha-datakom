@@ -141,11 +141,70 @@ control_buttons:
 - `label` - Текст под кнопкой
 - `class` - CSS класс для стиля (`btn-test`, `btn-auto`, `btn-manual`, `btn-stop`, `btn-run`)
 - `icon` - Иконка на кнопке (emoji или символ)
+- `image_on` - Путь к изображению для активного состояния
+- `image_off` - Путь к изображению для неактивного состояния
 - `indicator_entity` - Сенсор для индикатора состояния кнопки
 - `indicator_color` - Цвет индикатора: `green`, `red`, `yellow`
-- `tap_action` - Действие при клике (см. ниже)
+- `button_entity` - **Кнопка управления Home Assistant** (новое, рекомендуется)
+- `tap_action` - Действие при клике (устаревший способ, см. ниже)
+- `hide_if_small` - Скрыть кнопку на маленьких экранах
 
-### tap_action для кнопок
+### Привязка действий к кнопкам
+
+#### Способ 1: button_entity (рекомендуется)
+Интеграция Datakom создает кнопки управления автоматически. Просто укажите их в `button_entity`:
+
+```yaml
+control_buttons:
+  - action: run
+    label: RUN
+    image_on: /local/community/datakom/img/run-k.png
+    image_off: /local/community/datakom/img/run.png
+    indicator_entity: binary_sensor.run
+    indicator_color: green
+    button_entity: button.datakom_device_control_run  # Кнопка управления
+  
+  - action: auto
+    label: AUTO
+    image_on: /local/community/datakom/img/auto-k.png
+    image_off: /local/community/datakom/img/auto.png
+    indicator_entity: binary_sensor.auto
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_auto
+  
+  - action: manual
+    label: MAN
+    image_on: /local/community/datakom/img/manual-k.png
+    image_off: /local/community/datakom/img/manual.png
+    indicator_entity: binary_sensor.manual
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_manual
+  
+  - action: test
+    label: TEST
+    image_on: /local/community/datakom/img/test-k.png
+    image_off: /local/community/datakom/img/test.png
+    indicator_entity: binary_sensor.test
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_test
+  
+  - action: stop
+    label: STOP
+    image_on: /local/community/datakom/img/stop-k.png
+    image_off: /local/community/datakom/img/stop.png
+    indicator_entity: binary_sensor.stop
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_stop
+```
+
+**Доступные кнопки управления:**
+- `button.datakom_device_control_run` - Запуск генератора
+- `button.datakom_device_control_auto` - Автоматический режим
+- `button.datakom_device_control_manual` - Ручной режим
+- `button.datakom_device_control_test` - Тестовый режим
+- `button.datakom_device_control_stop` - Остановка
+
+#### Способ 2: tap_action (устаревший)
 
 **Вызов сервиса:**
 ```yaml
@@ -230,32 +289,47 @@ control_buttons:
     label: TEST
     class: btn-test
     icon: ⚙
+    image_on: /local/community/datakom/img/test-k.png
+    image_off: /local/community/datakom/img/test.png
     indicator_entity: binary_sensor.test
     indicator_color: yellow
+    button_entity: button.datakom_device_control_test
   - action: auto
     label: AUTO
     class: btn-auto
     icon: 🔧
+    image_on: /local/community/datakom/img/auto-k.png
+    image_off: /local/community/datakom/img/auto.png
     indicator_entity: binary_sensor.auto
     indicator_color: green
+    button_entity: button.datakom_device_control_auto
   - action: manual
     label: MAN
     class: btn-manual
     icon: ✋
+    image_on: /local/community/datakom/img/manual-k.png
+    image_off: /local/community/datakom/img/manual.png
     indicator_entity: binary_sensor.manual
     indicator_color: yellow
+    button_entity: button.datakom_device_control_manual
   - action: stop
     label: STOP
     class: btn-stop
     icon: O
+    image_on: /local/community/datakom/img/stop-k.png
+    image_off: /local/community/datakom/img/stop.png
     indicator_entity: binary_sensor.stop
     indicator_color: red
+    button_entity: button.datakom_device_control_stop
   - action: run
     label: RUN
     class: btn-run
     icon: I
+    image_on: /local/community/datakom/img/run-k.png
+    image_off: /local/community/datakom/img/run.png
     indicator_entity: binary_sensor.run
     indicator_color: green
+    button_entity: button.datakom_device_control_run
 ```
 
 ## Кастомизация внешнего вида

@@ -452,6 +452,11 @@ class DatakomControllerCard extends HTMLElement {
           this._hass.callService('button', 'press', {
             entity_id: buttonEntity
           });
+          
+          // Через 3 секунды обновляем состояния
+          setTimeout(() => {
+            this.updateStates();
+          }, 3000);
         } 
         // Иначе используем старый способ с tap_action
         else if (tapAction) {

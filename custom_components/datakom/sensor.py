@@ -221,6 +221,7 @@ class DatakomParamSensor(SensorEntity):
         self._param_id = param_id
         self._label = label
         self._device_name = device_name
+        self._attr_has_entity_name = True
         self._attr_name = label
         self._attr_unique_id = (
             f"datakom_"
@@ -228,6 +229,7 @@ class DatakomParamSensor(SensorEntity):
             f"{device_id}_"
             f"{param_id}"
         )
+        
         self.entity_description = SensorEntityDescription(
             key=f"datakom_{node_id}_{device_id}_{param_id}",
             name=label,
@@ -411,6 +413,7 @@ class DatakomDigitalOutputsSensor(SensorEntity):
         self._node_id = node_id
         self._device_id = device_id
         self._device_name = device_name
+        self._attr_has_entity_name = True
         self._attr_name = "Digital Outputs"
         self._attr_unique_id = f"datakom_{node_id}_{device_id}_digital_outputs"
         self._attr_translation_key = "digital_outputs"

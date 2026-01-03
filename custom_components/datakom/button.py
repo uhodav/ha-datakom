@@ -60,6 +60,7 @@ class DatakomRestartButton(ButtonEntity):
         self._node_id = node_id
         self._device_id = device_id
         self._device_name = device_name
+        self._attr_has_entity_name = True
         self._attr_name = "Restart"
         self._attr_unique_id = f"datakom_{node_id}_{device_id}_restart"
         self._attr_translation_key = "restart"
@@ -113,6 +114,7 @@ class DatakomControlButton(ButtonEntity):
         self._device_id = device_id
         self._device_name = device_name
         self._action = action
+        self._attr_has_entity_name = True
         self._attr_name = action.capitalize()
         self._attr_unique_id = f"datakom_{node_id}_{device_id}_control_{action}"
         self._attr_translation_key = f"control_{action}"
