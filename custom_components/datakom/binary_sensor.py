@@ -94,6 +94,7 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._status = None
         self._time = None
+        self._health_data = {}
         self._update_interval = update_interval
         self._attr_should_poll = True
 
@@ -126,7 +127,7 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
             icon_color = "red"
             rgb_color = [255, 0, 0]
             
-        return {
+        attrs = {
             "device_id": self._device_id,
             "node_id": self._node_id,
             "device_name": self._device_name,
@@ -136,6 +137,13 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
             "rgb_color": rgb_color,
             "description": "API connection status monitor",
         }
+        
+        # Добавляем все поля из ответа health endpoint
+        for key, value in self._health_data.items():
+            if key not in attrs:  # Не перезаписываем уже существующие
+                attrs[key] = value
+                
+        return attrs
 
     async def async_update(self) -> None:
         # Запрос к /health
@@ -147,11 +155,14 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
                     text = await resp.text()
                     _LOGGER.debug(f"Datakom: health response: {text}")
                     data = await resp.json()
+                    # Сохраняем все данные из ответа
+                    self._health_data = data
                     self._status = data.get("connect_state", "Unknown")
                     self._time = data.get("time", "")
             except Exception as e:
                 _LOGGER.error(f"Datakom: health sensor {self._attr_unique_id} update request error: {e}")
                 self._status = "Error"
+                self._health_data = {}
 
 
 class DatakomLedBinarySensor(BinarySensorEntity):
