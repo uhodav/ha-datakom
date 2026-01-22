@@ -19,7 +19,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return DatakomOptionsFlow(config_entry)
+        return DatakomOptionsFlow()
 
     async def async_step_user(self, user_input=None):
         errors = {}
