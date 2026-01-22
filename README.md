@@ -39,14 +39,14 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 
 ### Step 1: API Settings
 - **API URL**: Base URL of your Datakom REST API (e.g., `https://example.com/datakom/api`)
-- **Update Interval**: How often to fetch data (2-10 minutes)
+- **Update Interval**: How often to fetch data (1-60 minutes)
+- **Language**: Select interface language (Українська/English/Русский) - auto-detected from Home Assistant language
 
-### Step 2: Device Selection
-- Select the device you want to monitor from the list
-
-### Step 3: Parameter Selection
+### Step 2: Parameter Selection
 - Choose which parameters to monitor (multiple selection supported)
+- Parameter names are automatically translated based on selected language
 - The integration will create sensors for all selected parameters
+- All parameters are selected by default
 
 ## Sensors
 
@@ -85,16 +85,16 @@ Parameters from the API are automatically converted to sensors:
 
 ### Binary Sensors
 - **`binary_sensor.api_connection`** - API connection status
-- **`binary_sensor.mains`** - Mains power LED status
-- **`binary_sensor.genset`** - Generator LED status
-- **`binary_sensor.auto`** - Auto mode LED
-- **`binary_sensor.manual`** - Manual mode LED
-- **`binary_sensor.run`** - Run LED
-- **`binary_sensor.stop`** - Stop LED
-- **`binary_sensor.test`** - Test mode LED
+- **`binary_sensor.mains`** - Mains power LED status (calculated: on when generator is not running)
+- **`binary_sensor.genset`** - Generator LED status (calculated: on when generator is running)
+- **`binary_sensor.auto`** - Auto mode LED (calculated: on when mode is AUTO or AUTO_START)
+- **`binary_sensor.manual`** - Manual mode LED (calculated: on when mode is MANUAL)
+- **`binary_sensor.alarm`** - Alarm LED (calculated: on when any alarm is active)
 - **`binary_sensor.alarm_shutdown`** - Shutdown alarms
 - **`binary_sensor.alarm_warning`** - Warning alarms
 - **`binary_sensor.alarm_loaddump`** - LoadDump alarms
+
+**Note**: LED indicators are now calculated from generator state and mode parameters, not from direct API endpoints.
 
 ### Buttons
 - **`button.restart`** - Restart device controller
@@ -233,9 +233,60 @@ Go to **Settings → System → Logs** and search for `datakom` entries.
 - **ENUM sensors showing numbers**: Verify translation files are loaded correctly
 
 ## API Endpoints Used
-- `/dump_devm_param_names?did={device_id}&node_id={node_id}` - Get parameter list
-- `/dump_devm?did={device_id}&node_id={node_id}&id={param_id}` - Get parameter value
-- `/dump_devm?did={device_id}&node_id={node_id}` - Get all parameters (for calculated sensors)
+
+### Main Endpoints
+- `/health` - API health check and connection status
+- `/dump_devm_param_names?language={lang}` - Get parameter list with translations
+  - Language options: `uk` (Ukrainian), `en` (English), `ru` (Russian)
+- `/dump_devm?id={param_id}` - Get specific parameter value
+- `/dump_devm` - Get all parameters (used for calculated sensors and LED states)
+- `/dump_devm_alarm` - Get active alarm signals
+
+### Response Structure
+
+**Parameter data** (`/dump_devm`):
+```json
+{
+  "success": true,
+  "result": [
+    {
+      "id": 237,
+      "label": "Engine RPM",
+      "title": "Обороти двигуна",  // Translation based on language parameter
+      "value": 1497,
+      "unit": "RPM"
+    }
+  ],
+  "cached": true,
+  "timestamp": "2026-01-22T10:30:00.000Z"
+}
+```
+
+**Alarm data** (`/dump_devm_alarm`):
+```json
+{
+  "success": true,
+  "alarm": {
+    "ShutDown": [],
+    "LoadDump": [],
+    "Warning": [
+      {
+        "slot": 0,
+        "name": "Fuel Filling!",
+        "index": 252
+      }
+    ]
+  },
+  "cached": true
+}
+```
+
+### Key Parameter IDs
+- `103` - Genset Mode (0=Stop, 1=Auto, 2=Manual, 4=Auto-Start, etc.)
+- `105` - Genset State (0=At Rest, 1-25=Various running states)
+- `237` - Engine RPM
+- `239` - Engine Battery Voltage 1
+- `587` - Engine Fuel Percent
 
 ## License
 This integration is provided as-is for monitoring Datakom generator controllers.
@@ -274,14 +325,14 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Крок 1: Налаштування API
 - **URL API**: Базова URL вашого Datakom REST API (наприклад, `https://example.com/datakom/api`)
-- **Інтервал оновлення**: Як часто оновлювати дані (2-10 хвилин)
+- **Інтервал оновлення**: Як часто оновлювати дані (1-60 хвилин)
+- **Мова**: Виберіть мову інтерфейсу (Українська/English/Русский) - автоматично визначається з мови Home Assistant
 
-### Крок 2: Вибір пристрою
-- Виберіть пристрій, який хочете моніторити, зі списку
-
-### Крок 3: Вибір параметрів
+### Крок 2: Вибір параметрів
 - Виберіть параметри для моніторингу (підтримується множинний вибір)
+- Назви параметрів автоматично перекладаються відповідно до обраної мови
 - Інтеграція створить сенсори для всіх обраних параметрів
+- За замовчуванням вибрані всі параметри
 
 ## Сенсори
 
@@ -320,16 +371,16 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Бінарні сенсори
 - **`binary_sensor.api_connection`** - Стан підключення до API
-- **`binary_sensor.mains`** - Стан LED мережі
-- **`binary_sensor.genset`** - Стан LED генератора
-- **`binary_sensor.auto`** - LED автоматичного режиму
-- **`binary_sensor.manual`** - LED ручного режиму
-- **`binary_sensor.run`** - LED роботи
-- **`binary_sensor.stop`** - LED зупинки
-- **`binary_sensor.test`** - LED тестового режиму
+- **`binary_sensor.mains`** - Стан LED мережі (розраховується: увімкнено коли генератор не працює)
+- **`binary_sensor.genset`** - Стан LED генератора (розраховується: увімкнено коли генератор працює)
+- **`binary_sensor.auto`** - LED автоматичного режиму (розраховується: увімкнено в режимі AUTO або AUTO_START)
+- **`binary_sensor.manual`** - LED ручного режиму (розраховується: увімкнено в режимі MANUAL)
+- **`binary_sensor.alarm`** - LED аварії (розраховується: увімкнено при наявності активних аварій)
 - **`binary_sensor.alarm_shutdown`** - Аварії вимкнення
 - **`binary_sensor.alarm_warning`** - Попереджувальні аварії
 - **`binary_sensor.alarm_loaddump`** - Аварії скидання навантаження
+
+**Примітка**: Індикатори LED тепер розраховуються на основі стану та режиму генератора, а не з прямих API endpoints.
 
 ### Кнопки
 - **`button.restart`** - Перезапуск контролера пристрою
@@ -396,9 +447,21 @@ HA_datakom/
 - **ENUM сенсори показують числа**: Перевірте, чи правильно завантажені файли перекладів
 
 ## Використовувані API endpoints
-- `/dump_devm_param_names?did={device_id}&node_id={node_id}` - Отримання списку параметрів
-- `/dump_devm?did={device_id}&node_id={node_id}&id={param_id}` - Отримання значення параметра
-- `/dump_devm?did={device_id}&node_id={node_id}` - Отримання всіх параметрів (для розрахункових сенсорів)
+
+### Основні endpoints
+- `/health` - Перевірка стану API та підключення
+- `/dump_devm_param_names?language={lang}` - Отримання списку параметрів з перекладами
+  - Опції мови: `uk` (українська), `en` (англійська), `ru` (російська)
+- `/dump_devm?id={param_id}` - Отримання значення конкретного параметра
+- `/dump_devm` - Отримання всіх параметрів (використовується для розрахункових сенсорів та станів LED)
+- `/dump_devm_alarm` - Отримання активних аварійних сигналів
+
+### Ключові ID параметрів
+- `103` - Режим генератора (0=Стоп, 1=Авто, 2=Ручний, 4=Авто-запуск тощо)
+- `105` - Стан генератора (0=У спокої, 1-25=Різні робочі стани)
+- `237` - Оберти двигуна
+- `239` - Напруга акумулятора двигуна 1
+- `587` - Рівень палива у відсотках
 
 ## Ліцензія
 Ця інтеграція надається як є для моніторингу контролерів генераторів Datakom.

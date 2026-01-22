@@ -35,29 +35,13 @@ async def async_setup_entry(
     
     sensors = []
     
-    # Получаем список LED индикаторов
-    led_names = []
-    url = f"{api_url}/dump_devm_leds?did={device_id}&node_id={node_id}"
-    _LOGGER.debug(f"Datakom: requesting LED list from {url}")
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(url, timeout=15) as resp:
-                text = await resp.text()
-                _LOGGER.debug(f"Datakom: LED list response: {text}")
-                data = await resp.json()
-                if data.get("success") and "leds" in data:
-                    led_names = list(data["leds"].keys())
-                    _LOGGER.debug(f"Datakom: Found LEDs: {led_names}")
-                else:
-                    _LOGGER.error(f"Datakom: LED list failed, response: {data}")
-        except Exception as e:
-            _LOGGER.error(f"Datakom: LED list request error: {e}")
-    
-    # Создаём LED binary sensors
-    for led_name in led_names:
-        led_sensor = DatakomLedBinarySensor(api_url, node_id, device_id, led_name, device_name, update_interval)
+    # Создаём вычисляемые LED binary sensors
+    # Endpoint /dump_devm_leds больше не существует, LED вычисляются из параметров
+    led_types = ["mains", "genset", "auto", "manual", "alarm"]
+    for led_type in led_types:
+        led_sensor = DatakomLedBinarySensor(api_url, node_id, device_id, led_type, device_name, update_interval)
         sensors.append(led_sensor)
-        _LOGGER.debug(f"Datakom: Created LED binary sensor {led_sensor.unique_id}")
+        _LOGGER.debug(f"Datakom: Created calculated LED binary sensor {led_sensor.unique_id}")
     
     # Добавляем binary sensor статуса подключения
     health_sensor = DatakomHealthBinarySensor(api_url, node_id, device_id, device_name, update_interval)
@@ -225,25 +209,74 @@ class DatakomLedBinarySensor(BinarySensorEntity):
             "raw_value": self._state,
             "description": f"LED indicator status for {self._led_name}",
         }
+    
+    async def _update_alarm_state(self) -> None:
+        """Проверяет наличие активных алармов для LED alarm."""
+        url = f"{self._api_url}/dump_devm_alarm"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=15) as resp:
+                    data = await resp.json()
+                    if data.get("success") and "alarm" in data:
+                        alarm_data = data["alarm"]
+                        # Проверяем есть ли хоть один активный аларм
+                        has_alarms = (
+                            len(alarm_data.get("ShutDown", [])) > 0 or
+                            len(alarm_data.get("LoadDump", [])) > 0 or
+                            len(alarm_data.get("Warning", [])) > 0
+                        )
+                        self._state = 1 if has_alarms else 0
+                    else:
+                        self._state = 0
+        except Exception as e:
+            _LOGGER.error(f"Datakom: Alarm check for LED failed: {e}")
+            self._state = 0
 
     async def async_update(self) -> None:
-        # Запрос к /dump_devm_leds
-        url = f"{self._api_url}/dump_devm_leds?did={self._device_id}&node_id={self._node_id}"
-        _LOGGER.debug(f"Datakom: requesting LED status from {url}")
+        # Вычисляем состояние LED из параметров dump_devm
+        # Endpoint /dump_devm_leds больше не существует
+        url = f"{self._api_url}/dump_devm"
+        _LOGGER.debug(f"Datakom: requesting parameters for LED calculation from {url}")
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, timeout=15) as resp:
                     text = await resp.text()
-                    _LOGGER.debug(f"Datakom: LED response: {text}")
+                    _LOGGER.debug(f"Datakom: dump_devm response: {text}")
                     data = await resp.json()
-                    if data.get("success") and "leds" in data:
-                        leds = data["leds"]
-                        self._state = leds.get(self._led_name)
+                    if data.get("success") and "result" in data:
+                        params = {str(p["id"]): p.get("value") for p in data["result"]}
+                        
+                        # ID параметров (из примера API):
+                        # 103 = Genset Mode
+                        # 105 = Genset State
+                        genset_mode = params.get("103", 0)
+                        genset_state = params.get("105", 0)
+                        
+                        # Вычисляем состояние LED в зависимости от типа
+                        if self._led_name == "mains":
+                            # Mains горит когда генератор НЕ работает (at_rest)
+                            self._state = 1 if genset_state == 0 else 0
+                        elif self._led_name == "genset":
+                            # Genset горит когда генератор работает (не at_rest)
+                            self._state = 1 if genset_state != 0 else 0
+                        elif self._led_name == "auto":
+                            # Auto горит когда режим = AUTO (1) или AUTO_START (4)
+                            self._state = 1 if genset_mode in [1, 4] else 0
+                        elif self._led_name == "manual":
+                            # Manual горит когда режим = MANUAL (2)
+                            self._state = 1 if genset_mode == 2 else 0
+                        elif self._led_name == "alarm":
+                            # Alarm горит если есть активные алармы
+                            # Проверяем через отдельный запрос к alarm endpoint
+                            await self._update_alarm_state()
+                        else:
+                            self._state = 0
                     else:
-                        _LOGGER.error(f"Datakom: LED status failed, response: {data}")
+                        _LOGGER.error(f"Datakom: LED calculation failed, response: {data}")
+                        self._state = 0
             except Exception as e:
                 _LOGGER.error(f"Datakom: LED sensor {self._attr_unique_id} update request error: {e}")
-                self._state = None
+                self._state = 0
 
 
 class DatakomAlarmBinarySensor(BinarySensorEntity):
@@ -331,7 +364,7 @@ class DatakomAlarmBinarySensor(BinarySensorEntity):
 
     async def async_update(self) -> None:
         # Запрос к /dump_devm_alarm
-        url = f"{self._api_url}/dump_devm_alarm?did={self._device_id}&node_id={self._node_id}"
+        url = f"{self._api_url}/dump_devm_alarm"
         _LOGGER.debug(f"Datakom: requesting alarm status from {url}")
         async with aiohttp.ClientSession() as session:
             try:
@@ -341,9 +374,13 @@ class DatakomAlarmBinarySensor(BinarySensorEntity):
                     data = await resp.json()
                     if data.get("success") and "alarm" in data:
                         alarm_data = data["alarm"]
-                        self._alarms = alarm_data.get(self._alarm_type, [])
-                        # Очищаем пробелы в сообщениях аларма
-                        self._alarms = [alarm.strip() for alarm in self._alarms if alarm.strip()]
+                        alarms_list = alarm_data.get(self._alarm_type, [])
+                        # Новый формат: алармы - это объекты с полями slot, name, index
+                        if alarms_list and isinstance(alarms_list[0], dict):
+                            self._alarms = [alarm.get("name", "").strip() for alarm in alarms_list if alarm.get("name", "").strip()]
+                        else:
+                            # Старый формат: строки
+                            self._alarms = [alarm.strip() for alarm in alarms_list if isinstance(alarm, str) and alarm.strip()]
                     else:
                         _LOGGER.error(f"Datakom: Alarm status failed, response: {data}")
                         self._alarms = []
