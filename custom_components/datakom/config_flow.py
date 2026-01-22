@@ -159,19 +159,32 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        self.config_entry = config_entry
-        self.api_url = config_entry.data.get("api_url")
-        self.update_interval = config_entry.data.get("update_interval", 5)
-        self.language = config_entry.data.get("language", "uk")
+        _LOGGER.debug(f"Datakom Options: Initializing options flow for entry {config_entry.entry_id}")
+        try:
+            self.config_entry = config_entry
+            self.api_url = config_entry.data.get("api_url")
+            self.update_interval = config_entry.data.get("update_interval", 5)
+            self.language = config_entry.data.get("language", "uk")
+            _LOGGER.debug(f"Datakom Options: Initialized with api_url={self.api_url}, update_interval={self.update_interval}, language={self.language}")
+        except Exception as e:
+            _LOGGER.error(f"Datakom Options: Error in __init__: {e}", exc_info=True)
+            raise
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        return await self.async_step_api()
+        _LOGGER.debug(f"Datakom Options: async_step_init called with user_input={user_input}")
+        try:
+            return await self.async_step_api()
+        except Exception as e:
+            _LOGGER.error(f"Datakom Options: Error in async_step_init: {e}", exc_info=True)
+            raise
 
     async def async_step_api(self, user_input=None):
         """Configure API settings."""
+        _LOGGER.debug(f"Datakom Options: async_step_api called with user_input={user_input}")
         errors = {}
         current_data = self.config_entry.data
+        _LOGGER.debug(f"Datakom Options: current_data={current_data}")
         
         try:
             if user_input is not None:
@@ -188,9 +201,10 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     self.language = language
                     return await self.async_step_params()
         except Exception as e:
-            _LOGGER.error(f"Datakom Options: Error in async_step_api: {e}")
+            _LOGGER.error(f"Datakom Options: Error in async_step_api: {e}", exc_info=True)
             errors["base"] = "unknown"
         
+        _LOGGER.debug(f"Datakom Options: Showing api form with errors={errors}")
         return self.async_show_form(
             step_id="api",
             data_schema=vol.Schema({
@@ -219,9 +233,11 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_params(self, user_input=None):
         """Select parameters."""
+        _LOGGER.debug(f"Datakom Options: async_step_params called with user_input={user_input}")
         errors = {}
         param_choices = {}
         current_data = self.config_entry.data
+        _LOGGER.debug(f"Datakom Options: current_data={current_data}, self.api_url={self.api_url}")
         
         if not self.api_url:
             return await self.async_step_api()
