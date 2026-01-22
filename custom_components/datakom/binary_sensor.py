@@ -22,15 +22,13 @@ async def async_setup_entry(
     """Настройка платформы binary sensor через config entry."""
     entry_data = entry.data
     api_url = entry_data.get("api_url", "")
-    node_id = entry_data.get("node_id", "")
-    device_id = entry_data.get("device_id", "")
     device_name = entry_data.get("device_name", "Datakom Device")
     update_interval = entry_data.get("update_interval", 5)
     
     _LOGGER.debug(f"Datakom Binary Sensor: Setting up with entry_data: {entry_data}")
     
-    if not api_url or not device_id or not node_id:
-        _LOGGER.error(f"Datakom Binary Sensor: missing config data. api_url={api_url}, node_id={node_id}, device_id={device_id}")
+    if not api_url:
+        _LOGGER.error(f"Datakom Binary Sensor: missing api_url: {api_url}")
         return
     
     sensors = []
@@ -39,19 +37,19 @@ async def async_setup_entry(
     # Endpoint /dump_devm_leds больше не существует, LED вычисляются из параметров
     led_types = ["mains", "genset", "auto", "manual", "alarm"]
     for led_type in led_types:
-        led_sensor = DatakomLedBinarySensor(api_url, node_id, device_id, led_type, device_name, update_interval)
+        led_sensor = DatakomLedBinarySensor(api_url, led_type, device_name, update_interval)
         sensors.append(led_sensor)
         _LOGGER.debug(f"Datakom: Created calculated LED binary sensor {led_sensor.unique_id}")
     
     # Добавляем binary sensor статуса подключения
-    health_sensor = DatakomHealthBinarySensor(api_url, node_id, device_id, device_name, update_interval)
+    health_sensor = DatakomHealthBinarySensor(api_url, device_name, update_interval)
     sensors.append(health_sensor)
     _LOGGER.debug(f"Datakom: Created health binary sensor {health_sensor.unique_id}")
     
     # Добавляем alarm binary sensors
     alarm_types = ["ShutDown", "LoadDump", "Warning"]
     for alarm_type in alarm_types:
-        alarm_sensor = DatakomAlarmBinarySensor(api_url, node_id, device_id, alarm_type, device_name, update_interval)
+        alarm_sensor = DatakomAlarmBinarySensor(api_url, alarm_type, device_name, update_interval)
         sensors.append(alarm_sensor)
         _LOGGER.debug(f"Datakom: Created alarm binary sensor {alarm_sensor.unique_id}")
     
@@ -65,14 +63,12 @@ async def async_setup_entry(
 class DatakomHealthBinarySensor(BinarySensorEntity):
     """Binary sensor для мониторинга состояния подключения к API Datakom."""
 
-    def __init__(self, api_url, node_id, device_id, device_name, update_interval):
+    def __init__(self, api_url, device_name, update_interval):
         self._api_url = api_url
-        self._node_id = node_id
-        self._device_id = device_id
         self._device_name = device_name
         self._attr_has_entity_name = True
         self._attr_name = "API Connection"
-        self._attr_unique_id = f"datakom_{node_id}_{device_id}_health"
+        self._attr_unique_id = "datakom_health"
         self._attr_translation_key = "api_connection"
         self._attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -90,7 +86,7 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, str(self._device_id))},
+            "identifiers": {(DOMAIN, "datakom_device")},
             "name": self._device_name,
             "manufacturer": "Datakom",
             "model": "Device",
@@ -112,8 +108,6 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
             rgb_color = [255, 0, 0]
             
         attrs = {
-            "device_id": self._device_id,
-            "node_id": self._node_id,
             "device_name": self._device_name,
             "connect_state": self._status,
             "last_update": self._time,
@@ -152,15 +146,13 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
 class DatakomLedBinarySensor(BinarySensorEntity):
     """Binary sensor для отображения состояния LED индикатора Datakom."""
 
-    def __init__(self, api_url, node_id, device_id, led_name, device_name, update_interval):
+    def __init__(self, api_url, led_name, device_name, update_interval):
         self._api_url = api_url
-        self._node_id = node_id
-        self._device_id = device_id
         self._led_name = led_name
         self._device_name = device_name
         self._attr_has_entity_name = True
         self._attr_name = f"{led_name}"
-        self._attr_unique_id = f"datakom_{node_id}_{device_id}_led_{led_name.lower()}"
+        self._attr_unique_id = f"datakom_led_{led_name.lower()}"
         # Устанавливаем translation_key для известных LED
         led_key = led_name.lower().replace(" ", "_").replace("-", "_")
         if led_key in ["mains", "genset", "auto", "manual", "run", "stop", "test"]:
@@ -178,7 +170,7 @@ class DatakomLedBinarySensor(BinarySensorEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, str(self._device_id))},
+            "identifiers": {(DOMAIN, "datakom_device")},
             "name": self._device_name,
             "manufacturer": "Datakom",
             "model": "Device",
@@ -202,8 +194,6 @@ class DatakomLedBinarySensor(BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         return {
-            "device_id": self._device_id,
-            "node_id": self._node_id,
             "device_name": self._device_name,
             "led_name": self._led_name,
             "raw_value": self._state,
@@ -282,15 +272,13 @@ class DatakomLedBinarySensor(BinarySensorEntity):
 class DatakomAlarmBinarySensor(BinarySensorEntity):
     """Binary sensor для отображения состояния алармов Datakom."""
 
-    def __init__(self, api_url, node_id, device_id, alarm_type, device_name, update_interval):
+    def __init__(self, api_url, alarm_type, device_name, update_interval):
         self._api_url = api_url
-        self._node_id = node_id
-        self._device_id = device_id
         self._alarm_type = alarm_type
         self._device_name = device_name
         self._attr_has_entity_name = True
         self._attr_name = f"Alarm {alarm_type}"
-        self._attr_unique_id = f"datakom_{node_id}_{device_id}_alarm_{alarm_type.lower()}"
+        self._attr_unique_id = f"datakom_alarm_{alarm_type.lower()}"
         # Устанавливаем translation_key для аларма
         alarm_key = f"alarm_{alarm_type.lower()}"
         self._attr_translation_key = alarm_key
@@ -316,7 +304,7 @@ class DatakomAlarmBinarySensor(BinarySensorEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, str(self._device_id))},
+            "identifiers": {(DOMAIN, "datakom_device")},
             "name": self._device_name,
             "manufacturer": "Datakom",
             "model": "Device",
@@ -351,8 +339,6 @@ class DatakomAlarmBinarySensor(BinarySensorEntity):
             rgb_color = [0, 255, 0]
             
         return {
-            "device_id": self._device_id,
-            "node_id": self._node_id,
             "device_name": self._device_name,
             "alarm_type": self._alarm_type,
             "alarm_count": len(self._alarms),

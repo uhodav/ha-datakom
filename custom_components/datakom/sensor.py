@@ -159,16 +159,14 @@ async def async_setup_entry(
     """Настройка платформы сенсора через config entry."""
     entry_data = entry.data
     api_url = entry_data.get("api_url", "")
-    node_id = entry_data.get("node_id", "")
-    device_id = entry_data.get("device_id", "")
     device_name = entry_data.get("device_name", "Datakom Device")
     param_ids = entry_data.get("param_ids", [])
     update_interval = entry_data.get("update_interval", 5)
     
     _LOGGER.debug(f"Datakom: Setting up sensors with entry_data: {entry_data}")
     
-    if not api_url or not param_ids or not device_id or not node_id:
-        _LOGGER.error(f"Datakom: missing config data. api_url={api_url}, node_id={node_id}, device_id={device_id}, param_ids={param_ids}")
+    if not api_url or not param_ids:
+        _LOGGER.error(f"Datakom: missing config data. api_url={api_url}, param_ids={param_ids}")
         return
     
     sensors = []
@@ -197,7 +195,7 @@ async def async_setup_entry(
     _LOGGER.debug(f"Datakom: Creating sensors for param_ids: {param_ids}")
     for pid in param_ids:
         label = param_labels.get(str(pid), str(pid))
-        sensor = DatakomParamSensor(api_url, node_id, device_id, pid, label, device_name, update_interval)
+        sensor = DatakomParamSensor(api_url, pid, label, device_name, update_interval)
         sensors.append(sensor)
         _LOGGER.debug(f"Datakom: Created sensor {sensor.unique_id} for param {pid}")
     
@@ -212,28 +210,23 @@ async def async_setup_entry(
 class DatakomParamSensor(SensorEntity):
     """Сенсор для одного выбранного параметра Datakom."""
 
-    def __init__(self, api_url, node_id, device_id, param_id, label, device_name, update_interval):
+    def __init__(self, api_url, param_id, label, device_name, update_interval):
         self._api_url = api_url
-        self._node_id = node_id
-        self._device_id = device_id
         self._param_id = param_id
         self._label = label
         self._device_name = device_name
         self._attr_has_entity_name = True
         self._attr_name = label
-        self._attr_unique_id = (
-            f"datakom_"
-            f"{node_id}_"
-            f"{device_id}_"
-            f"{param_id}"
-        )
+        self._attr_unique_id = f"datakom_{param_id}"
         
         self.entity_description = SensorEntityDescription(
-            key=f"datakom_{node_id}_{device_id}_{param_id}",
+            key=f"datakom_{param_id}",
             name=label,
         )
         self._state = None
         self._unit = None
+        self._label_hint = None
+        self._value_hint = None
         self._update_interval = update_interval
         self._attr_should_poll = True
         self._hass = None
@@ -316,7 +309,7 @@ class DatakomParamSensor(SensorEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, str(self._device_id))},
+            "identifiers": {(DOMAIN, "datakom_device")},
             "name": self._device_name,
             "manufacturer": "Datakom",
             "model": "Device",
@@ -353,14 +346,21 @@ class DatakomParamSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {
+        attrs = {
             "unique_id": self._attr_unique_id,
-            "device_id": self._device_id,
             "label": self._label,
             "device_name": self._device_name,
             "param_id": self._param_id,
             "description": f"Parameter sensor for {self._label}",
         }
+        
+        # Добавляем labelHint и valueHint если есть
+        if self._label_hint:
+            attrs["label_hint"] = self._label_hint
+        if self._value_hint:
+            attrs["value_hint"] = self._value_hint
+            
+        return attrs
 
     async def async_update(self) -> None:
         # Запрос к /dump_devm?id=...
@@ -382,6 +382,10 @@ class DatakomParamSensor(SensorEntity):
                                 if "title" in p and p["title"]:
                                     self._label = p["title"]
                                     self._attr_name = p["title"]
+                                
+                                # Сохраняем labelHint и valueHint
+                                self._label_hint = p.get("labelHint")
+                                self._value_hint = p.get("valueHint")
                                 
                                 # Если это время с UTC+00:00, преобразуем в локальный часовой пояс
                                 if self._unit == "UTC+00:00" and value:
