@@ -214,6 +214,7 @@ class DatakomParamSensor(SensorEntity):
         self._api_url = api_url
         self._param_id = param_id
         self._label = label
+        self._original_label = label  # Сохраняем оригинальный английский label для description
         self._device_name = device_name
         self._attr_has_entity_name = True
         self._attr_name = label
@@ -351,7 +352,7 @@ class DatakomParamSensor(SensorEntity):
             "label": self._label,
             "device_name": self._device_name,
             "param_id": self._param_id,
-            "description": f"Parameter sensor for {self._label}",
+            "description": f"Parameter sensor for {self._original_label}",
         }
         
         # Добавляем labelHint и valueHint если есть
@@ -377,6 +378,10 @@ class DatakomParamSensor(SensorEntity):
                             if str(p["id"]) == str(self._param_id):
                                 value = p.get("value")
                                 self._unit = p.get("unit", "")
+                                
+                                # Сохраняем оригинальный английский label если доступен
+                                if "label" in p and p["label"]:
+                                    self._original_label = p["label"]
                                 
                                 # Обновляем label из title если доступен (с переводом)
                                 if "title" in p and p["title"]:

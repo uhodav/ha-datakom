@@ -133,6 +133,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "update_interval": self.update_interval,
                     "language": language,
                     "param_ids": selected_params,
+                    "device_name": "Datakom Device",
                 }
                 _LOGGER.debug(f"Datakom: Creating entry with data: {entry_data}")
                 return self.async_create_entry(
@@ -261,6 +262,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                         "update_interval": self.update_interval,
                         "language": language,
                         "param_ids": selected_params,
+                        "device_name": current_data.get("device_name", "Datakom Device"),
                     }
                     _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")
                     self.hass.config_entries.async_update_entry(
