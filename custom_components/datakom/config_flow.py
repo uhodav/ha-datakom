@@ -160,9 +160,9 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):
         """Initialize options flow."""
         self.config_entry = config_entry
-        self.api_url = None
-        self.update_interval = None
-        self.language = None
+        self.api_url = config_entry.data.get("api_url")
+        self.update_interval = config_entry.data.get("update_interval", 5)
+        self.language = config_entry.data.get("language", "uk")
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -223,8 +223,8 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         if not self.api_url:
             return await self.async_step_api()
         
-        # Используем язык из первого шага
-        language = getattr(self, 'language', current_data.get('language', 'uk'))
+        # Используем язык из self (установлен в __init__ или async_step_api)
+        language = self.language
         url = f"{self.api_url}/dump_devm_param_names?language={language}"
         _LOGGER.debug(f"Datakom Options: requesting param names from {url}")
         async with aiohttp.ClientSession() as session:
@@ -260,7 +260,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     new_data = {
                         "api_url": self.api_url,
                         "update_interval": self.update_interval,
-                        "language": language,
+                        "language": self.language,
                         "param_ids": selected_params,
                         "device_name": current_data.get("device_name", "Datakom Device"),
                     }
