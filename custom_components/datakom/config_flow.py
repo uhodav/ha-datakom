@@ -274,9 +274,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     self.hass.config_entries.async_update_entry(
                         self.config_entry, data=new_data, title="Datakom listener"
                     )
-                    # Удаляем старые entity перед перезагрузкой
-                    await _cleanup_old_entities(self.hass, self.config_entry)
-                    # Перезагружаем интеграцию для применения изменений
+                    # Перезагружаем интеграцию (cleanup выполнится в async_setup_entry)
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                     return self.async_create_entry(title="", data={})
                 except Exception as e:

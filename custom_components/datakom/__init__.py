@@ -13,10 +13,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = entry.data
     
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "button"])
-    
-    # Удаляем старые entity которых больше нет в конфигурации
+    # Удаляем старые entity перед созданием новых
     await _cleanup_old_entities(hass, entry)
+    
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "button"])
     
     return True
 
@@ -24,7 +24,8 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
     """Удаляет entity которых больше нет в текущей конфигурации."""
     try:
         entity_registry = er.async_get(hass)
-        current_param_ids = entry.data.get("param_ids", [])
+        # Преобразуем param_ids в int для корректного сравнения
+        current_param_ids = [int(pid) if isinstance(pid, str) else pid for pid in entry.data.get("param_ids", [])]
         
         _LOGGER.debug(f"Datakom: Starting cleanup. Current param_ids: {current_param_ids}")
         
