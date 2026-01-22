@@ -11,6 +11,13 @@
 
 Custom integration for monitoring Datakom generator controllers via REST API. Supports multi-language interface (English, Russian, Ukrainian), ENUM sensors with localized states, and calculated sensors for fuel efficiency and battery health monitoring.
 
+## Requirements
+
+**API Server**: This integration requires the Datakom API server to be running. The API server is available at:
+- **Repository**: [https://github.com/uhodav/datakom_listener](https://github.com/uhodav/datakom_listener)
+- The API server receives data packets from your Datakom controller, parses them, and provides the data in human-readable format via REST API endpoints
+- Follow the repository instructions to install and configure the API server before installing this Home Assistant integration
+
 ## Features
 
 - **Multi-language support**: English, Ukrainian, Russian translations
@@ -22,6 +29,12 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 
 ## Installation
 
+### Prerequisites
+1. **Install and configure the Datakom API server** from [https://github.com/uhodav/datakom_listener](https://github.com/uhodav/datakom_listener)
+   - The API server must be running and accessible from your Home Assistant instance
+   - Make sure you know the API URL (e.g., `http://your-server:8765/api`)
+
+### Home Assistant Integration
 1. Copy the `custom_components/datakom` folder to your Home Assistant `custom_components` directory
 2. Copy the `www/datakom` folder to your Home Assistant `config/www/` directory
 3. Restart Home Assistant
@@ -234,6 +247,9 @@ Go to **Settings → System → Logs** and search for `datakom` entries.
 
 ## API Endpoints Used
 
+**API Server**: These endpoints are provided by the Datakom API server. 
+For installation and configuration, see: [https://github.com/uhodav/datakom_listener](https://github.com/uhodav/datakom_listener)
+
 ### Main Endpoints
 - `/health` - API health check and connection status
 - `/dump_devm_param_names?language={lang}` - Get parameter list with translations
@@ -297,6 +313,13 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 Інтеграція для моніторингу контролерів генераторів Datakom через REST API. Підтримує багатомовний інтерфейс (англійська, російська, українська), ENUM сенсори з локалізованими станами та розрахункові сенсори для контролю ефективності палива та стану батареї.
 
+## Вимоги
+
+**API Сервер**: Ця інтеграція потребує запущеного Datakom API сервера. API сервер доступний за адресою:
+- **Репозиторій**: [https://github.com/uhodav/datakom_listener](https://github.com/uhodav/datakom_listener)
+- API сервер отримує пакети даних від вашого контролера Datakom, парсить їх та надає дані в зручному для читання форматі через REST API endpoints
+- Дотримуйтесь інструкцій у репозиторії для встановлення та налаштування API сервера перед встановленням цієї інтеграції Home Assistant
+
 ## Можливості
 
 - **Багатомовна підтримка**: переклади українською, англійською, російською
@@ -308,6 +331,12 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ## Встановлення
 
+### Передумови
+1. **Встановіть та налаштуйте Datakom API сервер** з [https://github.com/uhodav/datakom_listener](https://github.com/uhodav/datakom_listener)
+   - API сервер повинен бути запущений та доступний з вашого Home Assistant
+   - Переконайтеся, що ви знаєте URL API (наприклад, `http://your-server:8765/api`)
+
+### Інтеграція Home Assistant
 1. Скопіюйте папку `custom_components/datakom` до директорії `custom_components` вашого Home Assistant
 2. Скопіюйте папку `www/datakom` до `config/www/` вашого Home Assistant
 3. Перезапустіть Home Assistant
@@ -447,6 +476,9 @@ HA_datakom/
 - **ENUM сенсори показують числа**: Перевірте, чи правильно завантажені файли перекладів
 
 ## Використовувані API endpoints
+
+**API Сервер**: Ці endpoints надаються Datakom API сервером.
+Для встановлення та налаштування дивіться: [https://github.com/uhodav/datakom_listener](https://github.com/uhodav/datakom_listener)
 
 ### Основні endpoints
 - `/health` - Перевірка стану API та підключення
