@@ -15,6 +15,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "button"])
     
+    # Удаляем старые entity которых больше нет в конфигурации
+    await _cleanup_old_entities(hass, entry)
+    
     return True
 
 async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -26,16 +29,40 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
         # Получаем все entity для этой интеграции
         entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
         
+        removed_count = 0
         for entity in entities:
             # Проверяем только сенсоры параметров (не binary_sensor и button)
             if entity.domain == "sensor" and entity.unique_id.startswith("datakom_"):
                 # Извлекаем param_id из unique_id (формат: datakom_{param_id})
                 unique_id_parts = entity.unique_id.split("_")
-                if len(unique_id_parts) >= 2 and unique_id_parts[1].isdigit():
-                    param_id = int(unique_id_parts[1])
-                    # Если этого param_id больше нет в конфигурации - удаляем
-                    if param_id not in current_param_ids:
-                        entity_registry.async_remove(entity.entity_id)
+                if len(unique_id_parts) >= 2:
+                    # Проверяем второй элемент - если это число, то это param_id
+                    if unique_id_parts[1].isdigit():
+                        param_id = int(unique_id_parts[1])
+                        # Если этого param_id больше нет в конфигурации - удаляем
+                        if param_id not in current_param_ids:
+                            _LOGGER.info(f"Datakom: Removing old entity {entity.entity_id} (param_id={param_id} not in config)")
+                            entity_registry.async_remove(entity.entity_id)
+                            removed_count += 1
+                    else:
+                        # Если второй элемент не число, проверяем есть ли числовой param_id в конце
+                        # Например: datakom_information_hw_version -> нет числа -> удаляем если не в списке
+                        # Старый формат, нужно удалить если нет в текущих param_ids
+                        has_param_id = False
+                        for part in unique_id_parts:
+                            if part.isdigit():
+                                param_id = int(part)
+                                if param_id in current_param_ids:
+                                    has_param_id = True
+                                    break
+                        
+                        if not has_param_id:
+                            _LOGGER.info(f"Datakom: Removing old entity {entity.entity_id} (old format, not in current config)")
+                            entity_registry.async_remove(entity.entity_id)
+                            removed_count += 1
+        
+        if removed_count > 0:
+            _LOGGER.info(f"Datakom: Removed {removed_count} old entities")
     except Exception as e:
         _LOGGER.error(f"Datakom: Error during entity cleanup: {e}")
 

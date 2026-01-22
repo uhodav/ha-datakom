@@ -95,12 +95,17 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if connected."""
-        return self._status == "Connected"
+        # Проверяем status=='ok' или listener_running==true
+        status = self._health_data.get("status", "")
+        listener_running = self._health_data.get("listener_running", False)
+        return status == "ok" or listener_running == True
 
     @property
     def extra_state_attributes(self) -> dict:
         # Определяем цвет: зеленый если подключено, красный если отключено
-        if self._status == "Connected":
+        status = self._health_data.get("status", "")
+        listener_running = self._health_data.get("listener_running", False)
+        if status == "ok" or listener_running == True:
             icon_color = "green"
             rgb_color = [0, 255, 0]
         else:
@@ -130,13 +135,37 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, timeout=15) as resp:
-                    text = await resp.text()
-                    _LOGGER.debug(f"Datakom: health response: {text}")
-                    data = await resp.json()
-                    # Сохраняем все данные из ответа
-                    self._health_data = data
-                    self._status = data.get("connect_state", "Unknown")
-                    self._time = data.get("time", "")
+                    # Проверяем HTTP статус
+                    if resp.status != 200:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: health endpoint returned status {resp.status}: {text[:200]}")
+                        self._status = "Error"
+                        self._health_data = {}
+                        return
+                    
+                    # Проверяем content-type
+                    content_type = resp.content_type
+                    if content_type and 'json' not in content_type:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: health endpoint returned non-JSON content-type '{content_type}': {text[:200]}")
+                        self._status = "Error"
+                        self._health_data = {}
+                        return
+                    
+                    # Пытаемся распарсить JSON
+                    try:
+                        data = await resp.json()
+                        _LOGGER.debug(f"Datakom: health response: {data}")
+                        # Сохраняем все данные из ответа
+                        self._health_data = data
+                        # Сохраняем connect_state для информации (не для проверки is_on)
+                        self._status = data.get("connect_state", "Unknown")
+                        self._time = data.get("time", "")
+                    except ValueError as json_err:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: health endpoint returned invalid JSON: {text[:200]}")
+                        self._status = "Error"
+                        self._health_data = {}
             except Exception as e:
                 _LOGGER.error(f"Datakom: health sensor {self._attr_unique_id} update request error: {e}")
                 self._status = "Error"
@@ -230,9 +259,28 @@ class DatakomLedBinarySensor(BinarySensorEntity):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, timeout=15) as resp:
-                    text = await resp.text()
-                    _LOGGER.debug(f"Datakom: dump_devm response: {text}")
-                    data = await resp.json()
+                    # Проверяем HTTP статус
+                    if resp.status != 200:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned status {resp.status}: {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
+                    # Проверяем content-type
+                    content_type = resp.content_type
+                    if content_type and 'json' not in content_type:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned non-JSON content-type '{content_type}': {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
+                    # Пытаемся распарсить JSON
+                    try:
+                        data = await resp.json()
+                        _LOGGER.debug(f"Datakom: dump_devm response: {data}")
+                    except ValueError as json_err:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned invalid JSON: {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
                     if data.get("success") and "result" in data:
                         params = {str(p["id"]): p.get("value") for p in data["result"]}
                         
@@ -355,9 +403,28 @@ class DatakomAlarmBinarySensor(BinarySensorEntity):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, timeout=15) as resp:
-                    text = await resp.text()
-                    _LOGGER.debug(f"Datakom: alarm response: {text}")
-                    data = await resp.json()
+                    # Проверяем HTTP статус
+                    if resp.status != 200:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm_alarm endpoint returned status {resp.status}: {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
+                    # Проверяем content-type
+                    content_type = resp.content_type
+                    if content_type and 'json' not in content_type:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm_alarm endpoint returned non-JSON content-type '{content_type}': {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
+                    # Пытаемся распарсить JSON
+                    try:
+                        data = await resp.json()
+                        _LOGGER.debug(f"Datakom: alarm response: {data}")
+                    except ValueError as json_err:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm_alarm endpoint returned invalid JSON: {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
                     if data.get("success") and "alarm" in data:
                         alarm_data = data["alarm"]
                         alarms_list = alarm_data.get(self._alarm_type, [])

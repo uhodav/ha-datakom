@@ -370,9 +370,28 @@ class DatakomParamSensor(SensorEntity):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, timeout=15) as resp:
-                    text = await resp.text()
-                    _LOGGER.debug(f"Datakom: param value response: {text}")
-                    data = await resp.json()
+                    # Проверяем HTTP статус
+                    if resp.status != 200:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned status {resp.status}: {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
+                    # Проверяем content-type
+                    content_type = resp.content_type
+                    if content_type and 'json' not in content_type:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned non-JSON content-type '{content_type}': {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
+                    # Пытаемся распарсить JSON
+                    try:
+                        data = await resp.json()
+                        _LOGGER.debug(f"Datakom: param value response: {data}")
+                    except ValueError as json_err:
+                        text = await resp.text()
+                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned invalid JSON: {text[:200]}")
+                        return  # Оставляем последнее состояние
+                    
                     if data.get("success") and "result" in data:
                         for p in data["result"]:
                             if str(p["id"]) == str(self._param_id):
