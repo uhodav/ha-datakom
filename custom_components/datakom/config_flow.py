@@ -161,7 +161,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         """Initialize options flow."""
         _LOGGER.debug(f"Datakom Options: Initializing options flow for entry {config_entry.entry_id}")
         try:
-            self.config_entry = config_entry
+            # config_entry уже доступен через parent class как self.config_entry
             self.api_url = config_entry.data.get("api_url")
             self.update_interval = config_entry.data.get("update_interval", 5)
             self.language = config_entry.data.get("language", "uk")
