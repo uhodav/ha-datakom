@@ -2,7 +2,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
-from . import DOMAIN
+from . import DOMAIN, _cleanup_old_entities
 import aiohttp
 import logging
 
@@ -173,19 +173,23 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         errors = {}
         current_data = self.config_entry.data
         
-        if user_input is not None:
-            api_url = user_input.get("api_url", "").strip().rstrip("/")
-            update_interval = user_input.get("update_interval", 5)
-            language = user_input.get("language", "uk")
-            if not api_url:
-                errors["api_url"] = "required"
-            elif not (1 <= update_interval <= 60):
-                errors["update_interval"] = "invalid"
-            else:
-                self.api_url = api_url
-                self.update_interval = update_interval
-                self.language = language
-                return await self.async_step_params()
+        try:
+            if user_input is not None:
+                api_url = user_input.get("api_url", "").strip().rstrip("/")
+                update_interval = user_input.get("update_interval", 5)
+                language = user_input.get("language", "uk")
+                if not api_url:
+                    errors["api_url"] = "required"
+                elif not (1 <= update_interval <= 60):
+                    errors["update_interval"] = "invalid"
+                else:
+                    self.api_url = api_url
+                    self.update_interval = update_interval
+                    self.language = language
+                    return await self.async_step_params()
+        except Exception as e:
+            _LOGGER.error(f"Datakom Options: Error in async_step_api: {e}")
+            errors["base"] = "unknown"
         
         return self.async_show_form(
             step_id="api",
@@ -211,7 +215,6 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                 ),
             }),
             errors=errors,
-            description_placeholders={"step": "1"},
         )
 
     async def async_step_params(self, user_input=None):
@@ -268,6 +271,8 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     self.hass.config_entries.async_update_entry(
                         self.config_entry, data=new_data, title="Datakom Device"
                     )
+                    # Удаляем старые entity перед перезагрузкой
+                    await _cleanup_old_entities(self.hass, self.config_entry)
                     # Перезагружаем интеграцию для применения изменений
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                     return self.async_create_entry(title="", data={})
@@ -281,5 +286,4 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("param_ids", default=current_data.get("param_ids", [])): cv.multi_select(param_choices)
             }),
             errors=errors,
-            description_placeholders={"step": "2"},
         )
