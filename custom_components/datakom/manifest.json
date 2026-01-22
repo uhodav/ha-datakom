@@ -1,6 +1,6 @@
 {
   "domain": "datakom",
-  "name": "Datakom",
+  "name": "Datakom listener",
   "documentation": "https://github.com/uhodav/ha-datakom",
   "requirements": [],
   "codeowners": [],

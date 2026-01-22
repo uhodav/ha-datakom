@@ -7,7 +7,7 @@
 
 ---
 
-# Datakom Integration for Home Assistant
+# Datakom listener Integration for Home Assistant
 
 Custom integration for monitoring Datakom generator controllers via REST API. Supports multi-language interface (English, Russian, Ukrainian), ENUM sensors with localized states, and calculated sensors for fuel efficiency and battery health monitoring.
 
@@ -45,7 +45,7 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
    - Click **Create** for each
 5. Refresh your browser (Ctrl+F5)
 6. Go to **Settings → Devices & Services → Add Integration**
-7. Search for "Datakom API"
+7. Search for "Datakom listener"
 8. Follow the configuration steps
 
 ## Configuration
@@ -309,7 +309,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ---
 
-# Інтеграція Datakom для Home Assistant
+# Інтеграція Datakom listener для Home Assistant
 
 Інтеграція для моніторингу контролерів генераторів Datakom через REST API. Підтримує багатомовний інтерфейс (англійська, російська, українська), ENUM сенсори з локалізованими станами та розрахункові сенсори для контролю ефективності палива та стану батареї.
 
@@ -347,7 +347,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
    - Натисніть **Створити** для кожного
 5. Оновіть браузер (Ctrl+F5)
 6. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
-7. Знайдіть "Datakom API"
+7. Знайдіть "Datakom listener"
 8. Слідуйте крокам налаштування
 
 ## Налаштування

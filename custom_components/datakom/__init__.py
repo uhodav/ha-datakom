@@ -26,11 +26,17 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
         entity_registry = er.async_get(hass)
         current_param_ids = entry.data.get("param_ids", [])
         
+        _LOGGER.debug(f"Datakom: Starting cleanup. Current param_ids: {current_param_ids}")
+        
         # Получаем все entity для этой интеграции
         entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
         
+        _LOGGER.debug(f"Datakom: Found {len(entities)} total entities for this integration")
+        
         removed_count = 0
         for entity in entities:
+            _LOGGER.debug(f"Datakom: Checking entity {entity.entity_id} (domain={entity.domain}, unique_id={entity.unique_id})")
+            
             # Проверяем только сенсоры параметров (не binary_sensor и button)
             if entity.domain == "sensor" and entity.unique_id.startswith("datakom_"):
                 # Извлекаем param_id из unique_id (формат: datakom_{param_id})
@@ -44,6 +50,8 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
                             _LOGGER.info(f"Datakom: Removing old entity {entity.entity_id} (param_id={param_id} not in config)")
                             entity_registry.async_remove(entity.entity_id)
                             removed_count += 1
+                        else:
+                            _LOGGER.debug(f"Datakom: Keeping entity {entity.entity_id} (param_id={param_id} is in config)")
                     else:
                         # Если второй элемент не число, проверяем есть ли числовой param_id в конце
                         # Например: datakom_information_hw_version -> нет числа -> удаляем если не в списке
@@ -63,8 +71,10 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
         
         if removed_count > 0:
             _LOGGER.info(f"Datakom: Removed {removed_count} old entities")
+        else:
+            _LOGGER.debug(f"Datakom: No old entities to remove")
     except Exception as e:
-        _LOGGER.error(f"Datakom: Error during entity cleanup: {e}")
+        _LOGGER.error(f"Datakom: Error during entity cleanup: {e}", exc_info=True)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

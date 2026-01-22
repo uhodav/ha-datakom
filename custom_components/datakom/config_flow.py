@@ -137,7 +137,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
                 _LOGGER.debug(f"Datakom: Creating entry with data: {entry_data}")
                 return self.async_create_entry(
-                    title="Datakom Device",
+                    title="Datakom listener",
                     data=entry_data
                 )
         
@@ -156,21 +156,6 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class DatakomOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Datakom."""
-
-    def __init__(self, config_entry):
-        """Initialize options flow."""
-        _LOGGER.debug(f"Datakom Options: Initializing options flow for entry {config_entry.entry_id}")
-        try:
-            # Вызываем __init__ родительского класса
-            super().__init__(config_entry)
-            # config_entry уже доступен через parent class как self.config_entry
-            self.api_url = config_entry.data.get("api_url")
-            self.update_interval = config_entry.data.get("update_interval", 5)
-            self.language = config_entry.data.get("language", "uk")
-            _LOGGER.debug(f"Datakom Options: Initialized with api_url={self.api_url}, update_interval={self.update_interval}, language={self.language}")
-        except Exception as e:
-            _LOGGER.error(f"Datakom Options: Error in __init__: {e}", exc_info=True)
-            raise
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -287,7 +272,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     }
                     _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")
                     self.hass.config_entries.async_update_entry(
-                        self.config_entry, data=new_data, title="Datakom Device"
+                        self.config_entry, data=new_data, title="Datakom listener"
                     )
                     # Удаляем старые entity перед перезагрузкой
                     await _cleanup_old_entities(self.hass, self.config_entry)
