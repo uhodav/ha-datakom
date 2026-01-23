@@ -238,6 +238,20 @@
           "maintenance": "Техобслуговування"
         }
       },
+      "charge_state": {
+        "name": "Стан заряду",
+        "state": {
+          "idle": "Простій",
+          "charging": "Зарядка",
+          "float": "Підтримка",
+          "equalize": "Вирівнювання",
+          "boost": "Прискорена",
+          "bulk": "Основна",
+          "absorption": "Поглинання",
+          "error": "Помилка",
+          "unknown": "Невідомо"
+        }
+      },
       "digital_outputs": {
         "name": "Цифрові виходи"
       }

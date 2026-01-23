@@ -35,7 +35,7 @@ async def async_setup_entry(
     
     # Создаём вычисляемые LED binary sensors
     # Endpoint /dump_devm_leds больше не существует, LED вычисляются из параметров
-    led_types = ["mains", "genset", "auto", "manual", "alarm"]
+    led_types = ["mains", "genset", "auto", "manual", "test", "run", "stop", "alarm"]
     for led_type in led_types:
         led_sensor = DatakomLedBinarySensor(api_url, led_type, device_name, update_interval)
         sensors.append(led_sensor)
@@ -303,6 +303,15 @@ class DatakomLedBinarySensor(BinarySensorEntity):
                         elif self._led_name == "manual":
                             # Manual горит когда режим = MANUAL (2)
                             self._state = 1 if genset_mode == 2 else 0
+                        elif self._led_name == "test":
+                            # Test горит когда режим = TEST (3)
+                            self._state = 1 if genset_mode == 3 else 0
+                        elif self._led_name == "run":
+                            # Run горит когда генератор работает (state != 0)
+                            self._state = 1 if genset_state != 0 else 0
+                        elif self._led_name == "stop":
+                            # Stop горит когда режим = STOP (0)
+                            self._state = 1 if genset_mode == 0 else 0
                         elif self._led_name == "alarm":
                             # Alarm горит если есть активные алармы
                             # Проверяем через отдельный запрос к alarm endpoint

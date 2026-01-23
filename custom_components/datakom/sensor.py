@@ -100,6 +100,16 @@ RUNNING_TYPE_MAP = {
     0: "no_load", 1: "on_load", 2: "test", 3: "maintenance",
 }
 
+# Маппинг состояния зарядки (битовые флаги)
+CHARGE_STATE_MAP = {
+    "0": "idle", "1": "charging", "2": "float", "3": "equalize",
+    "4": "boost", "8": "bulk", "16": "absorption", "32": "error",
+    "2048": "unknown",
+    0: "idle", 1: "charging", 2: "float", 3: "equalize",
+    4: "boost", 8: "bulk", 16: "absorption", 32: "error",
+    2048: "unknown",
+}
+
 # Словарь для сопоставления ключевых слов с маппингами
 ENUM_MAPPINGS = {
     "genset_mode": (GENSET_MODE_MAP, ["stop", "auto", "manual", "test", "auto_start", "remote", "schedule", "maintenance", "emergency"]),
@@ -119,6 +129,7 @@ ENUM_MAPPINGS = {
     "battery_state": (BATTERY_STATE_MAP, ["normal", "low", "critical", "disconnected", "charging"]),
     "start_source": (START_SOURCE_MAP, ["none", "manual", "ats_mains_fail", "remote", "schedule", "load_demand", "test"]),
     "running_type": (RUNNING_TYPE_MAP, ["no_load", "on_load", "test", "maintenance"]),
+    "charge_state": (CHARGE_STATE_MAP, ["idle", "charging", "float", "equalize", "boost", "bulk", "absorption", "error", "unknown"]),
 }
 
 # Маппинг единиц измерения на иконки
@@ -243,6 +254,9 @@ class DatakomParamSensor(SensorEntity):
         # Genset State
         elif "state" in label_lower and ("genset" in label_lower or "generator" in label_lower):
             self._enum_type = "genset_state"
+        # Engine Charge State (проверяем до engine_state для избежания конфликта)
+        elif "charge" in label_lower and "state" in label_lower and "engine" in label_lower:
+            self._enum_type = "charge_state"
         # Engine State/Status
         elif ("state" in label_lower or "status" in label_lower) and "engine" in label_lower:
             self._enum_type = "engine_state"
@@ -252,8 +266,8 @@ class DatakomParamSensor(SensorEntity):
         # Mains State
         elif "state" in label_lower and "mains" in label_lower:
             self._enum_type = "mains_state"
-        # Battery State
-        elif ("state" in label_lower or "status" in label_lower) and ("battery" in label_lower or "charge" in label_lower):
+        # Battery State (только для battery, без charge)
+        elif ("state" in label_lower or "status" in label_lower) and "battery" in label_lower:
             self._enum_type = "battery_state"
         # Start Source
         elif "start" in label_lower and ("source" in label_lower or "request" in label_lower):

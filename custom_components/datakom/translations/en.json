@@ -238,6 +238,20 @@
           "maintenance": "Maintenance Run"
         }
       },
+      "charge_state": {
+        "name": "Charge State",
+        "state": {
+          "idle": "Idle",
+          "charging": "Charging",
+          "float": "Float",
+          "equalize": "Equalize",
+          "boost": "Boost",
+          "bulk": "Bulk",
+          "absorption": "Absorption",
+          "error": "Error",
+          "unknown": "Unknown"
+        }
+      },
       "digital_outputs": {
         "name": "Digital Outputs"
       }
