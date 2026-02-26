@@ -1,6 +1,7 @@
 {
-  "name": "Datakom",
+  "name": "Datakom listener",
   "content_in_root": false,
   "filename": "datakom-controller-card.js",
-  "render_readme": true
+  "render_readme": true,
+  "country": ["UA"]
 }

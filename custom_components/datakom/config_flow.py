@@ -262,12 +262,14 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                 errors["param_ids"] = "required"
             else:
                 try:
-                    # Обновляем данные конфигурации
+                    # Удаляем параметры, которых нет в новом выборе
+                    cleaned_params = [p for p in selected_params if p in param_choices]
+                    # cleaned_params содержит только те, что реально доступны
                     new_data = {
                         "api_url": self.api_url,
                         "update_interval": self.update_interval,
                         "language": self.language,
-                        "param_ids": selected_params,
+                        "param_ids": cleaned_params,
                         "device_name": current_data.get("device_name", "Datakom Device"),
                     }
                     _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")

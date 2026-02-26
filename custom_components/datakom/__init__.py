@@ -40,11 +40,7 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
             "datakom_led_test", "datakom_led_run", "datakom_led_stop", "datakom_led_alarm",
             "datakom_alarm_shutdown", "datakom_alarm_loaddump", "datakom_alarm_warning"
         }
-        valid_button_ids = {
-            "datakom_restart",
-            "datakom_control_run", "datakom_control_auto", "datakom_control_manual",
-            "datakom_control_test", "datakom_control_stop"
-        }
+        valid_button_ids = {}
         
         removed_count = 0
         for entity in entities:
@@ -63,26 +59,16 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
                         # Старый формат типа datakom_engine_coolant_temp
                         should_remove = True
                         _LOGGER.debug(f"Datakom: Will remove sensor {entity.entity_id} - old name format")
-                elif entity.unique_id.startswith("terrakotta_"):
-                    # Старый prefix terrakotta
-                    should_remove = True
-                    _LOGGER.debug(f"Datakom: Will remove sensor {entity.entity_id} - old terrakotta prefix")
                     
             elif entity.domain == "binary_sensor":
                 # Для binary_sensor: удаляем если unique_id не в списке правильных или имеет старый prefix
-                if entity.unique_id.startswith("terrakotta_"):
-                    should_remove = True
-                    _LOGGER.debug(f"Datakom: Will remove binary_sensor {entity.entity_id} - old terrakotta prefix")
-                elif entity.unique_id not in valid_binary_sensor_ids:
+                if entity.unique_id not in valid_binary_sensor_ids:
                     should_remove = True
                     _LOGGER.debug(f"Datakom: Will remove binary_sensor {entity.entity_id} - not in valid list")
                     
             elif entity.domain == "button":
                 # Для button: удаляем если unique_id не в списке правильных или имеет старый prefix
-                if entity.unique_id.startswith("terrakotta_"):
-                    should_remove = True
-                    _LOGGER.debug(f"Datakom: Will remove button {entity.entity_id} - old terrakotta prefix")
-                elif entity.unique_id not in valid_button_ids:
+                if entity.unique_id not in valid_button_ids:
                     should_remove = True
                     _LOGGER.debug(f"Datakom: Will remove button {entity.entity_id} - not in valid list")
             

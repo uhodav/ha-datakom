@@ -1,501 +1,678 @@
-  title: Datakom Basic
-  views:
-    - title: Огляд
-      icon: mdi:view-dashboard
-      cards:
-        - type: glance
-          show_name: false
-          show_state: false
-          state_color: true
-          entities:
-            - entity: binary_sensor.api_connection
-            - entity: binary_sensor.alarm_shutdown
-              icon: mdi:alert-octagon
-            - entity: binary_sensor.alarm_warning
-              name: Warning Alarms
-              icon: mdi:alert
-            - entity: binary_sensor.alarm_loaddump
-              name: LoadDump Alarms
-              icon: mdi:alert-circle
-        - type: glance
-          show_name: false
-          show_state: false
-          state_color: true
-          entities:
-            - entity: binary_sensor.test
-              icon: mdi:test-tube
-            - entity: binary_sensor.auto
-              icon: mdi:auto-mode
-            - entity: binary_sensor.manual
-              icon: mdi:hand-back-right
-            - entity: binary_sensor.run
-              icon: mdi:run
-            - entity: binary_sensor.stop
-              icon: mdi:stop
-            - entity: binary_sensor.mains
-              icon: mdi:power-plug
-            - entity: binary_sensor.genset
-              icon: mdi:engine
-        - type: conditional
-          conditions:
-            - entity: binary_sensor.alarm_loaddump
-              state: 'on'
-          card:
-            type: markdown
-            title: ⚠️ LoadDump Alarms
-            content: >
-              {% set alarms = state_attr('binary_sensor.alarm_loaddump', 'alarms')
-              %} {% if alarms %}
-                {% for alarm in alarms %}
-              - 🔴 {{ alarm }}
-                {% endfor %}
-              {% else %} Нет активных алармов {% endif %}
-        - type: conditional
-          conditions:
-            - entity: binary_sensor.alarm_shutdown
-              state: 'on'
-          card:
-            type: markdown
-            title: ⚠️ ShutDown Alarms
-            content: >
-              {% set alarms = state_attr('binary_sensor.alarm_shutdown', 'alarms')
-              %} {% if alarms %}
-                {% for alarm in alarms %}
-              - ⛔ {{ alarm }}
-                {% endfor %}
-              {% else %} Нет активных алармов {% endif %}
-        - type: conditional
-          conditions:
-            - entity: binary_sensor.alarm_warning
-              state: 'on'
-          card:
-            type: markdown
-            title: ⚠️ Warning Alarms
-            content: >
-              {% set alarms = state_attr('binary_sensor.alarm_warning', 'alarms')
-              %} {% if alarms %}
-                {% for alarm in alarms %}
-              - ⚠️ {{ alarm }}
-                {% endfor %}
-              {% else %} Нет активных алармов {% endif %}
-        - type: entities
-          title: Системная информация
-          show_header_toggle: false
-          entities:
-            - entity: sensor.information_sw_version
-              name: Software Version
-            - entity: sensor.information_device_date
-              name: Device Date
-            - entity: sensor.genset_state
-              name: Genset State
-            - entity: sensor.genset_tot_apparent_pwr
-              name: Повна потужність (kVA)
-            - entity: sensor.engine_fuel_level
-    - title: Електроживлення
-      icon: mdi:flash
-      cards:
-        - type: horizontal-stack
-          cards:
-            - type: gauge
-              entity: sensor.genset_l1
-              name: Напруга L1
-              min: 180
-              max: 260
-              severity:
-                green: 210
-                yellow: 200
-                red: 190
-              needle: true
-            - type: gauge
-              entity: sensor.genset_l2
-              name: Напруга L2
-              min: 180
-              max: 260
-              severity:
-                green: 210
-                yellow: 200
-                red: 190
-              needle: true
-            - type: gauge
-              entity: sensor.genset_l3
-              name: Напруга L3
-              min: 180
-              max: 260
-              severity:
-                green: 210
-                yellow: 200
-                red: 190
-              needle: true
-        - type: history-graph
-          title: Графік напруг (V)
-          hours_to_show: 2
-          entities:
-            - entity: sensor.genset_l1
-              name: L1
-            - entity: sensor.genset_l2
-              name: L2
-            - entity: sensor.genset_l3
-              name: L3
-        - type: horizontal-stack
-          cards:
-            - type: sensor
-              entity: sensor.genset_i1
-              name: Струм L1
-              icon: mdi:current-ac
-              graph: line
-            - type: sensor
-              entity: sensor.genset_i2
-              name: Струм L2
-              icon: mdi:current-ac
-              graph: line
-            - type: sensor
-              entity: sensor.genset_i3
-              name: Струм L3
-              icon: mdi:current-ac
-              graph: line
-        - type: history-graph
-          title: Графік струмів (A)
-          hours_to_show: 2
-          entities:
-            - entity: sensor.genset_i1
-              name: L1
-            - entity: sensor.genset_i2
-              name: L2
-            - entity: sensor.genset_i3
-              name: L3
-        - type: gauge
-          entity: sensor.genset_freq
-          name: Частота генератора
-          min: 45
-          max: 55
-          severity:
-            green: 49.5
-            yellow: 48
-            red: 47
-          needle: true
-        - type: entities
-          title: Потужності
-          show_header_toggle: false
-          entities:
-            - entity: sensor.genset_tot_active_pwr
-              name: Активна потужність (kW)
-              icon: mdi:flash
-            - entity: sensor.genset_tot_reactive_pwr
-              name: Реактивна потужність (kVAr)
-              icon: mdi:flash-outline
-            - entity: sensor.genset_tot_apparent_pwr
-              name: Повна потужність (kVA)
-              icon: mdi:flash-circle
-            - entity: sensor.genset_pwr_factor
-              name: Коефіцієнт потужності
-              icon: mdi:percent
-        - type: history-graph
-          title: Графік потужностей
-          hours_to_show: 2
-          entities:
-            - entity: sensor.genset_tot_active_pwr
-              name: Active (kW)
-            - entity: sensor.genset_tot_apparent_pwr
-              name: Apparent (kVA)
-            - entity: sensor.genset_tot_reactive_pwr
-              name: Reactive (kVAr)
-        - type: sensor
-          entity: sensor.engine_battery_voltage1
-          name: Напруга батареї
-          icon: mdi:battery
-          graph: line
-    - title: Генератор
-      icon: mdi:engine
-      cards:
-        - type: horizontal-stack
-          cards:
-            - type: gauge
-              entity: sensor.engine_rpm
-              name: Оберти двигуна
-              min: 0
-              max: 2000
-              severity:
-                green: 1400
-                yellow: 1000
-                red: 500
-              needle: true
-            - type: gauge
-              entity: sensor.engine_coolant_temp
-              name: Температура
-              min: 0
-              max: 120
-              unit: °C
-              severity:
-                green: 0
-                yellow: 90
-                red: 100
-              needle: true
-        - type: horizontal-stack
-          cards:
-            - type: gauge
-              entity: sensor.engine_oil_pressure
-              name: Тиск масла
-              min: 0
-              max: 10
-              unit: Bar
-              severity:
-                red: 0
-                yellow: 2
-                green: 3
-              needle: true
-            - type: gauge
-              entity: sensor.sender_oil_pressure
-              name: Тиск масла
-              min: 0
-              max: 10
-              unit: Bar
-              severity:
-                red: 0
-                yellow: 2
-                green: 3
-              needle: true
-        - type: history-graph
-          title: Параметри двигуна
-          hours_to_show: 1
-          entities:
-            - entity: sensor.engine_rpm
-              name: RPM
-            - entity: sensor.engine_coolant_temp
-              name: Temperature (°C)
-        - type: sensor
-          entity: sensor.engine_fuel_level
-          name: Рівень палива
-          icon: mdi:gas-station
-          graph: line
-        - type: horizontal-stack
-          cards:
-            - type: entity
-              entity: sensor.engine_run_hours
-              name: Мотогодини
-              icon: mdi:clock-outline
-            - type: entity
-              entity: sensor.engine_genset_runs
-              name: Запуски генератора
-              icon: mdi:counter
-        - type: sensor
-          entity: sensor.genset_freq
-          name: Частота генератора
-          icon: mdi:sine-wave
-          graph: line
-    - title: Енергія
-      icon: mdi:counter
-      cards:
-        - type: horizontal-stack
-          cards:
-            - type: entity
-              entity: sensor.genset_total_kwh
-              name: Активна енергія
-              icon: mdi:counter
-            - type: entity
-              entity: sensor.genset_total_kvarh_ind
-              name: Реактивна енергія
-              icon: mdi:counter
-        - type: history-graph
-          title: Графік енергії
-          hours_to_show: 24
-          entities:
-            - entity: sensor.genset_total_kwh
-              name: Active Energy (kWh)
-            - entity: sensor.genset_total_kvarh_ind
-              name: Reactive Energy (kVArh)
-    - title: Діагностика
-      icon: mdi:stethoscope
-      cards:
-        - type: entities
-          title: Системна інформація
-          show_header_toggle: false
-          state_color: true
-          entities:
-            - entity: binary_sensor.api_connection
-              name: API Connection
-              icon: mdi:api
-            - entity: sensor.information_sw_version
-              name: Software Version
-              icon: mdi:chip
-            - entity: sensor.information_hw_version
-              name: Hardware Version
-              icon: mdi:memory
-            - entity: sensor.information_device_date
-              name: Device Date
-              icon: mdi:clock
-            - entity: sensor.genset_state
-              name: Genset State
-              icon: mdi:engine
-            - entity: sensor.genset_mode
-              name: Genset Mode
-              icon: mdi:cog
-        - type: entities
-          title: Активні аларми
-          show_header_toggle: false
-          state_color: true
-          entities:
-            - entity: binary_sensor.alarm_shutdown
-              name: ShutDown Alarms
-              icon: mdi:alert-octagon
-            - entity: binary_sensor.alarm_warning
-              name: Warning Alarms
-              icon: mdi:alert
-            - entity: binary_sensor.alarm_loaddump
-              name: LoadDump Alarms
-              icon: mdi:alert-circle
-        - type: conditional
-          conditions:
-            - entity: binary_sensor.alarm_shutdown
-              state: 'on'
-          card:
-            type: markdown
-            title: ⚠️ ShutDown Alarms
-            content: >
-              {% set alarms = state_attr('binary_sensor.alarm_shutdown', 'alarms')
-              %} {% if alarms %}
-                {% for alarm in alarms %}
-              - ⛔ {{ alarm }}
-                {% endfor %}
-              {% else %} Нет активных алармов {% endif %}
-        - type: conditional
-          conditions:
-            - entity: binary_sensor.alarm_warning
-              state: 'on'
-          card:
-            type: markdown
-            title: ⚠️ Warning Alarms
-            content: >
-              {% set alarms = state_attr('binary_sensor.alarm_warning', 'alarms')
-              %} {% if alarms %}
-                {% for alarm in alarms %}
-              - ⚠️ {{ alarm }}
-                {% endfor %}
-              {% else %} Нет активных алармов {% endif %}
-        - type: conditional
-          conditions:
-            - entity: binary_sensor.alarm_loaddump
-              state: 'on'
-          card:
-            type: markdown
-            title: ⚠️ LoadDump Alarms
-            content: >
-              {% set alarms = state_attr('binary_sensor.alarm_loaddump', 'alarms')
-              %} {% if alarms %}
-                {% for alarm in alarms %}
-              - 🔴 {{ alarm }}
-                {% endfor %}
-              {% else %} Нет активных алармов {% endif %}
-        - type: entities
-          title: Додаткові параметри
-          show_header_toggle: false
-          entities:
-            - entity: sensor.information_connection
-              name: Connection Status
-            - entity: sensor.information_lan_ip
-              name: LAN IP
-            - entity: sensor.information_wan_ip
-              name: WAN IP
-            - entity: sensor.information_site_id
-              name: Site ID
-    - title: Всі параметри
-      icon: mdi:information
-      cards:
-        - type: entities
-          title: Всі напруги (Генератор)
-          show_header_toggle: false
-          entities:
-            - entity: sensor.genset_l1
-              name: L1 Voltage
-            - entity: sensor.genset_l2
-              name: L2 Voltage
-            - entity: sensor.genset_l3
-              name: L3 Voltage
-            - entity: sensor.genset_l1_l2
-              name: L1-L2 Voltage
-            - entity: sensor.genset_l2_l3
-              name: L2-L3 Voltage
-            - entity: sensor.genset_l3_l1
-              name: L3-L1 Voltage
-            - entity: sensor.engine_battery_voltage1
-              name: Battery Voltage 1
-            - entity: sensor.engine_battery_voltage2
-              name: Battery Voltage 2
-        - type: entities
-          title: Всі струми (Генератор)
-          show_header_toggle: false
-          entities:
-            - entity: sensor.genset_i1
-              name: L1 Current
-            - entity: sensor.genset_i2
-              name: L2 Current
-            - entity: sensor.genset_i3
-              name: L3 Current
-            - entity: sensor.genset_in
-              name: Neutral Current
-        - type: entities
-          title: Потужності і енергія (Генератор)
-          show_header_toggle: false
-          entities:
-            - entity: sensor.genset_tot_active_pwr
-              name: Active Power (kW)
-            - entity: sensor.genset_tot_reactive_pwr
-              name: Reactive Power (kVAr)
-            - entity: sensor.genset_tot_apparent_pwr
-              name: Apparent Power (kVA)
-            - entity: sensor.genset_pwr_factor
-              name: Power Factor
-            - entity: sensor.genset_total_kwh
-              name: Active Energy (kWh)
-            - entity: sensor.genset_total_kvarh_ind
-              name: Reactive Energy Inductive (kVArh)
-            - entity: sensor.genset_total_kvarh_cap
-              name: Reactive Energy Capacitive (kVArh)
-        - type: entities
-          title: Частоти
-          show_header_toggle: false
-          entities:
-            - entity: sensor.genset_freq
-              name: Generator Frequency (Hz)
-            - entity: sensor.mains_freq
-              name: Mains Frequency (Hz)
-        - type: entities
-          title: Параметри двигуна
-          show_header_toggle: false
-          entities:
-            - entity: sensor.engine_rpm
-              name: Engine RPM
-            - entity: sensor.engine_coolant_temp
-              name: Coolant Temperature (°C)
-            - entity: sensor.engine_oil_temp
-              name: Oil Temperature (°C)
-            - entity: sensor.engine_oil_pressure
-              name: Oil Pressure (Bar)
-            - entity: sensor.engine_fuel_level
-              name: Fuel Level
-            - entity: sensor.engine_run_hours
-              name: Engine Run Hours
-            - entity: sensor.engine_genset_runs
-              name: Genset Runs
-            - entity: sensor.engine_genset_cranks
-              name: Genset Cranks
-        - type: glance
-          title: Статуси (короткий огляд)
-          show_name: true
-          show_state: false
-          state_color: true
-          columns: 4
-          entities:
-            - entity: binary_sensor.mains
-              name: Mains
-            - entity: binary_sensor.genset
-              name: Gen
-            - entity: binary_sensor.auto
-              name: Auto
-            - entity: binary_sensor.manual
-              name: Manual
-            - entity: binary_sensor.run
-              name: Run
-            - entity: binary_sensor.stop
-              name: Stop
-            - entity: binary_sensor.test
-              name: Test
+title: Datakom Basic
+views:
+  - title: Огляд
+    icon: mdi:view-dashboard
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Потужність
+            min: 0
+            max: 120
+            severity:
+              green: 40
+              yellow: 20
+              red: 1
+            needle: true
+          - type: gauge
+            entity: sensor.datakom_device_tisk_mastila
+            name: Тиск масла
+            min: 0
+            max: 10
+            unit: Bar
+            severity:
+              red: 0
+              yellow: 2
+              green: 3
+            needle: true
+          - type: gauge
+            entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Температура
+            min: 0
+            max: 120
+            unit: °C
+            severity:
+              green: 0
+              yellow: 90
+              red: 100
+            needle: true
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.datakom_device_riven_paliva
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 40
+              yellow: 20
+              red: 0
+            name: Паливо
+          - type: gauge
+            entity: sensor.datakom_device_chastota_generatora
+            name: Частота
+            min: 45
+            max: 55
+            severity:
+              green: 49.5
+              yellow: 48
+              red: 47
+            needle: true
+          - type: gauge
+            entity: sensor.datakom_device_oboroti_dviguna
+            name: Оберти двигуна
+            min: 0
+            max: 2000
+            severity:
+              green: 1400
+              yellow: 1000
+              red: 500
+            needle: true
+      - type: vertical-stack
+        cards:
+          - type: glance
+            show_name: false
+            show_state: false
+            state_color: true
+            entities:
+              - entity: binary_sensor.datakom_device_api_connection
+              - entity: binary_sensor.datakom_device_alarm_shutdown
+                icon: mdi:alert-octagon
+              - entity: binary_sensor.datakom_device_alarm_warning
+                name: Warning Alarms
+                icon: mdi:alert
+              - entity: binary_sensor.datakom_device_alarm_loaddump
+                name: LoadDump Alarms
+                icon: mdi:alert-circle
+      - type: entities
+        title: Системная информация
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_stan_generatora
+            name: Genset State
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Повна потужність (kVA)
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.datakom_alarm_loaddump
+            state: 'on'
+        card:
+          type: markdown
+          title: ⚠️ LoadDump Alarms
+          content: >
+            {% set alarms = state_attr('binary_sensor.datakom_alarm_loaddump',
+            'alarms') %} {% if alarms %}
+              {% for alarm in alarms %}
+            - 🔴 {{ alarm }}
+              {% endfor %}
+            {% else %} Нет активных алармов {% endif %}
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.datakom_alarm_shutdown
+            state: 'on'
+        card:
+          type: markdown
+          title: ⚠️ ShutDown Alarms
+          content: >
+            {% set alarms = state_attr('binary_sensor.datakom_alarm_shutdown',
+            'alarms') %} {% if alarms %}
+              {% for alarm in alarms %}
+            - ⛔ {{ alarm }}
+              {% endfor %}
+            {% else %} Нет активных алармов {% endif %}
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.datakom_alarm_warning
+            state: 'on'
+        card:
+          type: markdown
+          title: ⚠️ Warning Alarms
+          content: >
+            {% set alarms = state_attr('binary_sensor.datakom_alarm_warning',
+            'alarms') %} {% if alarms %}
+              {% for alarm in alarms %}
+            - ⚠️ {{ alarm }}
+              {% endfor %}
+            {% else %} Нет активных алармов {% endif %}
+      - type: custom:datakom-controller-card
+        model: D-500 MK3
+        status_title: ''
+        status_indicators:
+          - label: AUTO READY
+            color: green
+            entity: binary_sensor.datakom_device_auto
+          - label: shutdown
+            color: red
+            entity: binary_sensor.datakom_alarm_shutdown
+          - label: WARNING
+            color: yellow
+            entity: binary_sensor.datakom_alarm_warning
+          - label: loaddump
+            color: yellow
+            entity: binary_sensor.datakom_alarm_loaddump
+        display_title: ''
+        display_values:
+          - label: Паливо
+            entity: sensor.datakom_device_riven_paliva
+          - label: kWt
+            entity: sensor.datakom_device_zagalna_aktivna_potuzhnist
+          - label: До сервісу
+            entity: sensor.datakom_device_godin_do_obslug_1
+        side_indicators:
+          - label: MAINS
+            color: green
+            entity: binary_sensor.datakom_device_mains
+          - label: GENSET
+            color: green
+            entity: binary_sensor.datakom_device_genset
+        control_buttons:
+          - action: test
+            label: TEST
+            class: ''
+            icon: ⚙
+            image_on: /local/community/datakom/img/test-k.png
+            image_off: /local/community/datakom/img/test.png
+            indicator_entity: binary_sensor.datakom_device_test
+            indicator_color: yellow
+            hide_if_small: true
+          - action: run
+            label: RUN
+            class: ''
+            icon: I
+            image_on: /local/community/datakom/img/run-k.png
+            image_off: /local/community/datakom/img/run.png
+            indicator_entity: binary_sensor.datakom_device_run
+            indicator_color: green
+          - action: manual
+            label: MAN
+            class: ''
+            icon: ✋
+            image_on: /local/community/datakom/img/manual-k.png
+            image_off: /local/community/datakom/img/manual.png
+            indicator_entity: binary_sensor.datakom_device_manual
+            indicator_color: yellow
+            hide_if_small: true
+          - action: auto
+            label: AUTO
+            class: ''
+            icon: 🔧
+            image_on: /local/community/datakom/img/auto-k.png
+            image_off: /local/community/datakom/img/auto.png
+            indicator_entity: binary_sensor.datakom_device_auto
+            indicator_color: yellow
+          - action: stop
+            label: STOP
+            class: ''
+            icon: O
+            image_on: /local/community/datakom/img/stop-k.png
+            image_off: /local/community/datakom/img/stop.png
+            indicator_entity: binary_sensor.datakom_device_stop
+            indicator_color: yellow
+            button_entity: button.datakom_control_stop
+    visible:
+      - user: 4d3d8a5423b94e7181bc2df0955f44e7
+  - title: Електроживлення
+    icon: mdi:flash
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: gauge
+                entity: sensor.datakom_device_generator_l1
+                name: L1
+                min: 180
+                max: 260
+                severity:
+                  green: 210
+                  yellow: 200
+                  red: 190
+                needle: true
+              - type: gauge
+                entity: sensor.datakom_device_generator_l2
+                name: L2
+                min: 180
+                max: 260
+                severity:
+                  green: 210
+                  yellow: 200
+                  red: 190
+                needle: true
+              - type: gauge
+                entity: sensor.datakom_device_generator_l3
+                name: L3
+                min: 180
+                max: 260
+                severity:
+                  green: 210
+                  yellow: 200
+                  red: 190
+                needle: true
+          - type: vertical-stack
+            cards:
+              - type: history-graph
+                hours_to_show: 12
+                entities:
+                  - entity: sensor.datakom_device_generator_l1
+                    name: L1
+                  - entity: sensor.datakom_device_generator_l2
+                    name: L2
+                  - entity: sensor.datakom_device_generator_l3
+                    name: L3
+        title: Напруга
+      - type: vertical-stack
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: gauge
+                entity: sensor.datakom_device_generator_i1
+                name: L1
+                min: 0
+                max: 100
+                needle: true
+                severity:
+                  red: 80
+                  yellow: 60
+                  green: 0
+              - type: gauge
+                entity: sensor.datakom_device_generator_i2
+                name: L2
+                min: 0
+                max: 100
+                needle: true
+                severity:
+                  red: 80
+                  yellow: 60
+                  green: 0
+              - type: gauge
+                entity: sensor.datakom_device_generator_i3
+                name: L3
+                min: 0
+                max: 100
+                needle: true
+                severity:
+                  red: 80
+                  yellow: 60
+                  green: 0
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.datakom_device_generator_i1
+                name: L1
+              - entity: sensor.datakom_device_generator_i2
+                name: L2
+              - entity: sensor.datakom_device_generator_i3
+                name: L3
+        title: Струм
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          show_states: true
+          colorize_states: true
+        experimental:
+          color_threshold: true
+        graph_span: 12h
+        all_series_config:
+          type: line
+          stroke_width: 2
+          group_by:
+            func: avg
+            duration: 5m
+        series:
+          - entity: sensor.datakom_device_zagalna_aktivna_potuzhnist
+            name: Active (kW)
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Apparent (kVA)
+        yaxis:
+          - decimals: 0
+        apex_config:
+          stroke:
+            curve: smooth
+            width: 2
+          legend:
+            show: true
+            position: bottom
+          tooltip:
+            enabled: true
+            x:
+              format: HH:mm
+          dataLabels:
+            enabled: false
+          yaxis:
+            tickAmount: 10
+            forceNiceScale: false
+          xaxis:
+            type: datetime
+            labels:
+              format: HH:mm
+            tickAmount: 6
+          grid:
+            show: true
+            borderColor: '#444'
+    visible:
+      - user: 4d3d8a5423b94e7181bc2df0955f44e7
+  - title: Генератор
+    icon: mdi:engine
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.datakom_device_oboroti_dviguna
+            name: Оберти двигуна
+            min: 0
+            max: 2000
+            severity:
+              green: 1400
+              yellow: 1000
+              red: 500
+            needle: true
+          - type: gauge
+            entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Температура
+            min: 0
+            max: 120
+            unit: °C
+            severity:
+              green: 0
+              yellow: 90
+              red: 100
+            needle: true
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.datakom_device_tisk_mastila
+            name: Тиск масла
+            min: 0
+            max: 10
+            unit: Bar
+            severity:
+              red: 0
+              yellow: 2
+              green: 3
+            needle: true
+      - type: history-graph
+        title: Параметри двигуна
+        hours_to_show: 1
+        entities:
+          - entity: sensor.datakom_device_oborti_dviguna
+            name: RPM
+          - entity: sensor.datakom_device_temperatura_okholodzhuval_noi_ridini
+            name: Temperature (°C)
+      - type: sensor
+        entity: sensor.datakom_device_riven_paliva
+        name: Рівень палива
+        icon: mdi:gas-station
+        graph: line
+      - type: horizontal-stack
+        cards:
+          - type: entity
+            entity: sensor.datakom_device_godini_roboti
+            name: Мотогодини
+            icon: mdi:clock-outline
+          - type: entity
+            entity: sensor.datakom_device_kil_kist_zapuskiv
+            name: Запуски генератора
+            icon: mdi:counter
+      - type: sensor
+        entity: sensor.datakom_device_chastota_generatora
+        name: Частота генератора
+        icon: mdi:sine-wave
+        graph: line
+    visible:
+      - user: 4d3d8a5423b94e7181bc2df0955f44e7
+  - title: Енергія
+    icon: mdi:counter
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: entity
+            entity: sensor.datakom_device_zagalna_energiia_kvt_god
+            name: Активна енергія
+            icon: mdi:counter
+          - type: entity
+            entity: sensor.datakom_device_zagalna_reaktivna_energiia_ind
+            name: Реактивна енергія
+            icon: mdi:counter
+      - type: history-graph
+        title: Графік енергії
+        hours_to_show: 24
+        entities:
+          - entity: sensor.datakom_device_zagalna_energiia_kvt_god
+            name: Active Energy (kWh)
+          - entity: sensor.datakom_device_zagalna_reaktivna_energiia_ind
+            name: Reactive Energy (kVArh)
+    visible:
+      - user: 4d3d8a5423b94e7181bc2df0955f44e7
+  - title: Діагностика
+    icon: mdi:stethoscope
+    cards:
+      - type: entities
+        title: Системна інформація
+        show_header_toggle: false
+        state_color: true
+        entities:
+          - entity: binary_sensor.datakom_device_api_connection
+            name: API Connection
+            icon: mdi:api
+          - entity: sensor.datakom_device_stan_generatora
+            name: Genset State
+            icon: mdi:engine
+          - entity: sensor.datakom_device_rezhim_roboti
+            name: Genset Mode
+            icon: mdi:cog
+          - entity: sensor.datakom_device_lan_ip_adresa
+            name: LAN IP
+            icon: mdi:ip-network
+          - entity: sensor.datakom_device_unikalnii_id
+            name: Unique ID
+            icon: mdi:identifier
+          - entity: sensor.datakom_device_mac_adresa
+            name: MAC Address
+            icon: mdi:network
+      - type: entities
+        title: Активні аларми
+        show_header_toggle: false
+        state_color: true
+        entities:
+          - entity: binary_sensor.datakom_device_alarm_loaddump
+            name: ShutDown Alarms
+            icon: mdi:alert-octagon
+          - entity: binary_sensor.datakom_device_alarm_warning
+            name: Warning Alarms
+            icon: mdi:alert
+          - entity: binary_sensor.datakom_device_alarm_loaddump
+            name: LoadDump Alarms
+            icon: mdi:alert-circle
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.datakom_alarm_shutdown
+            state: 'on'
+        card:
+          type: markdown
+          title: ⚠️ ShutDown Alarms
+          content: >
+            {% set alarms = state_attr('binary_sensor.datakom_alarm_shutdown',
+            'alarms') %} {% if alarms %}
+              {% for alarm in alarms %}
+            - ⛔ {{ alarm }}
+              {% endfor %}
+            {% else %} Нет активных алармов {% endif %}
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.datakom_alarm_warning
+            state: 'on'
+        card:
+          type: markdown
+          title: ⚠️ Warning Alarms
+          content: >
+            {% set alarms = state_attr('binary_sensor.datakom_alarm_warning',
+            'alarms') %} {% if alarms %}
+              {% for alarm in alarms %}
+            - ⚠️ {{ alarm }}
+              {% endfor %}
+            {% else %} Нет активных алармов {% endif %}
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.datakom_alarm_loaddump
+            state: 'on'
+        card:
+          type: markdown
+          title: ⚠️ LoadDump Alarms
+          content: >
+            {% set alarms = state_attr('binary_sensor.datakom_alarm_loaddump',
+            'alarms') %} {% if alarms %}
+              {% for alarm in alarms %}
+            - 🔴 {{ alarm }}
+              {% endfor %}
+            {% else %} Нет активных алармов {% endif %}
+    visible:
+      - user: 4d3d8a5423b94e7181bc2df0955f44e7
+  - title: Всі параметри
+    icon: mdi:information
+    cards:
+      - type: entities
+        title: Всі напруги (Генератор)
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_generator_l1
+            name: L1 Voltage
+          - entity: sensor.datakom_device_generator_l2
+            name: L2 Voltage
+          - entity: sensor.datakom_device_generator_l3
+            name: L3 Voltage
+          - entity: sensor.datakom_device_generator_l1_l2
+            name: L1-L2 Voltage
+          - entity: sensor.datakom_device_generator_l2_l3
+            name: L2-L3 Voltage
+          - entity: sensor.datakom_device_generator_l3_l1
+            name: L3-L1 Voltage
+          - entity: sensor.datakom_device_napruga_akumuliatora_1
+            name: Battery Voltage 1
+          - entity: sensor.datakom_device_napruga_akumuliatora_2
+            name: Battery Voltage 2
+          - entity: sensor.datakom_device_napruga_zariadu
+            name: Charge Voltage
+      - type: entities
+        title: Всі струми (Генератор)
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_generator_i1
+            name: L1 Current
+          - entity: sensor.datakom_device_generator_i2
+            name: L2 Current
+          - entity: sensor.datakom_device_generator_i3
+            name: L3 Current
+      - type: entities
+        title: Потужності і енергія (Генератор)
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_zagalna_aktivna_potuzhnist
+            name: Active Power (kW)
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Apparent Power (kVA)
+          - entity: sensor.datakom_device_zagalna_energiia_kvt_god
+            name: Active Energy (kWh)
+          - entity: sensor.datakom_device_zagalna_reaktivna_energiia_ind
+            name: Reactive Energy Inductive (kVArh)
+          - entity: sensor.datakom_device_zagalna_reaktivna_energiia_iemn
+            name: Reactive Energy Capacitive (kVArh)
+      - type: entities
+        title: Частоти
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_chastota_generatora
+            name: Generator Frequency (Hz)
+          - entity: sensor.datakom_device_chastota_merezhi
+            name: Mains Frequency (Hz)
+      - type: entities
+        title: Параметри двигуна
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_oboroti_dviguna
+            name: Engine RPM
+          - entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Coolant Temperature (°C)
+          - entity: sensor.datakom_device_tisk_mastila
+            name: Oil Pressure (Bar)
+          - entity: sensor.datakom_device_riven_paliva
+            name: Fuel Level
+          - entity: sensor.datakom_device_godini_roboti
+            name: Engine Run Hours
+          - entity: sensor.datakom_device_kilkist_zapuskiv
+            name: Genset Runs
+          - entity: sensor.datakom_device_kilkist_prokrutok
+            name: Genset Cranks
+      - type: entities
+        title: Сервісні інтервали
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_godin_do_obslug_1
+            name: Hours to Service 1
+          - entity: sensor.datakom_device_dniv_do_obslug_1
+            name: Days to Service 1
+          - entity: sensor.datakom_device_godin_do_obslug_2
+            name: Hours to Service 2
+          - entity: sensor.datakom_device_dniv_do_obslug_2
+            name: Days to Service 2
+          - entity: sensor.datakom_device_godin_do_obslug_3
+            name: Hours to Service 3
+          - entity: sensor.datakom_device_dniv_do_obslug_3
+            name: Days to Service 3
+      - type: glance
+        title: Статуси (короткий огляд)
+        show_name: true
+        show_state: false
+        state_color: true
+        columns: 4
+        entities:
+          - entity: binary_sensor.datakom_device_mains
+            name: Mains
+          - entity: binary_sensor.datakom_device_genset
+            name: Gen
+          - entity: binary_sensor.datakom_device_auto
+            name: Auto
+          - entity: binary_sensor.datakom_device_manual
+            name: Manual
+          - entity: binary_sensor.datakom_device_run
+            name: Run
+          - entity: binary_sensor.datakom_device_stop
+            name: Stop
+          - entity: binary_sensor.datakom_device_test
+            name: Test
+      - type: entities
+        title: Мережа (Mains)
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_merezha_l1
+            name: Mains L1
+          - entity: sensor.datakom_device_merezha_l2
+            name: Mains L2
+          - entity: sensor.datakom_device_merezha_l3
+            name: Mains L3
+          - entity: sensor.datakom_device_merezha_i1
+            name: Mains I1
+          - entity: sensor.datakom_device_merezha_i2
+            name: Mains I2
+          - entity: sensor.datakom_device_merezha_i3
+            name: Mains I3
+          - entity: sensor.datakom_device_merezha_l1_l2
+            name: Mains L1-L2
+          - entity: sensor.datakom_device_merezha_l2_l3
+            name: Mains L2-L3
+          - entity: sensor.datakom_device_merezha_l3_l1
+            name: Mains L3-L1
+          - entity: sensor.datakom_device_zagalna_aktivna_potuzhnist_merezhi
+            name: Mains Tot Active Pwr
+          - entity: sensor.datakom_device_zagalna_reaktivna_potuzhnist_merezhi
+            name: Mains Tot Reactive Pwr
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist_merezhi
+            name: Mains Tot Apparent Pwr
+          - entity: sensor.datakom_device_zagalna_energiia_merezhi_kvt_god
+            name: Mains Total kWh
+          - entity: sensor.datakom_device_zagalna_reaktivna_energiia_merezhi_ind
+            name: Mains Total kVArh (Ind)
+          - entity: sensor.datakom_device_zagalna_reaktivna_energiia_merezhi_iemn
+            name: Mains Total kVArh (Cap)
+          - entity: sensor.datakom_device_zagalna_eksportovana_energiia_kvt_god
+            name: Mains Total Export kWh

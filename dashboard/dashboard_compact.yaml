@@ -1,0 +1,255 @@
+title: Datakom Compact
+views:
+  - title: Компактний огляд
+    icon: mdi:view-compact
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: picture-glance
+            title: Статус генератора
+            entities:
+              - entity: binary_sensor.datakom_device_genset
+                icon: mdi:engine
+              - entity: binary_sensor.datakom_device_mains
+                icon: mdi:transmission-tower
+              - entity: binary_sensor.datakom_device_auto
+                icon: mdi:auto-mode
+              - entity: binary_sensor.datakom_device_api_connection
+                icon: mdi:api
+            camera_image: camera.placeholder
+            camera_view: live
+            state_filter:
+              "on": brightness(110%) saturate(1.2)
+              "off": brightness(50%) saturate(0.8)
+          - type: horizontal-stack
+            cards:
+                tap_action:
+                  action: toggle
+                show_state: false
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: statistic
+            entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Потужність
+            icon: mdi:flash
+            period:
+              calendar:
+                period: hour
+          - type: statistic
+            entity: sensor.datakom_device_riven_paliva
+            name: Паливо
+            icon: mdi:gas-station
+            period:
+              calendar:
+                period: hour
+          - type: statistic
+            entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Температура
+            icon: mdi:thermometer
+            period:
+              calendar:
+                period: hour
+          - type: statistic
+            entity: sensor.datakom_device_oboroti_dviguna
+            name: Обороти
+            icon: mdi:engine
+            period:
+              calendar:
+                period: hour
+      - type: entities
+        title: Швидкий огляд
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_stan_generatora
+            name: Стан
+            icon: mdi:information
+          - entity: sensor.datakom_device_rezhim_roboti
+            name: Режим
+            icon: mdi:cog
+          - entity: sensor.datakom_device_chastota_generatora
+            name: Частота
+            icon: mdi:sine-wave
+          - entity: sensor.datakom_device_tisk_mastila
+            name: Тиск масла
+            icon: mdi:oil
+          - type: divider
+          - entity: binary_sensor.datakom_device_alarm_shutdown
+            name: Критичні аларми
+          - entity: binary_sensor.datakom_device_alarm_warning
+            name: Попередження
+          - entity: binary_sensor.datakom_device_alarm_loaddump
+            name: Скидання навантаження
+      - type: history-graph
+        title: Робота за останню годину
+        hours_to_show: 1
+        entities:
+          - entity: sensor.datakom_device_oboroti_dviguna
+            name: RPM
+          - entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Temp
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Power
+      - type: grid
+        columns: 3
+        square: false
+        cards:
+          - type: entity
+            entity: sensor.datakom_device_godini_roboti
+            name: Мотогодини
+            icon: mdi:clock-outline
+          - type: entity
+            entity: sensor.datakom_device_kilkist_zapuskiv
+            name: Запуски
+            icon: mdi:counter
+          - type: entity
+            entity: sensor.datakom_device_godin_do_obslug_1
+            name: До сервісу
+            icon: mdi:wrench-clock
+  - title: Електрика
+    icon: mdi:lightning-bolt
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.datakom_device_generator_l1
+            name: L1
+            min: 0
+            max: 260
+            needle: true
+            severity:
+              green: 210
+              yellow: 200
+              red: 190
+          - type: gauge
+            entity: sensor.datakom_device_generator_l2
+            name: L2
+            min: 0
+            max: 260
+            needle: true
+            severity:
+              green: 210
+              yellow: 200
+              red: 190
+          - type: gauge
+            entity: sensor.datakom_device_generator_l3
+            name: L3
+            min: 0
+            max: 260
+            needle: true
+            severity:
+              green: 210
+              yellow: 200
+              red: 190
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.datakom_device_generator_i1
+            name: I1
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              red: 80
+              yellow: 60
+              green: 0
+          - type: gauge
+            entity: sensor.datakom_device_generator_i2
+            name: I2
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              red: 80
+              yellow: 60
+              green: 0
+          - type: gauge
+            entity: sensor.datakom_device_generator_i3
+            name: I3
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              red: 80
+              yellow: 60
+              green: 0
+      - type: entities
+        title: Потужності
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_zagalna_aktivna_potuzhnist
+            name: Активна (kW)
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Повна (kVA)
+          - entity: sensor.datakom_device_chastota_generatora
+            name: Частота (Hz)
+          - type: divider
+          - entity: sensor.datakom_device_zagalna_energiia_kvt_god
+            name: Енергія (kWh)
+  - title: Техобслуговування
+    icon: mdi:wrench
+    cards:
+      - type: entities
+        title: Інтервали обслуговування
+        show_header_toggle: false
+        entities:
+          - type: section
+            label: Сервіс 1
+          - entity: sensor.datakom_device_godin_do_obslug_1
+            name: Годин до сервісу
+            icon: mdi:clock-outline
+          - entity: sensor.datakom_device_dniv_do_obslug_1
+            name: Днів до сервісу
+            icon: mdi:calendar
+          - type: section
+            label: Сервіс 2
+          - entity: sensor.datakom_device_godin_do_obslug_2
+            name: Годин до сервісу
+            icon: mdi:clock-outline
+          - entity: sensor.datakom_device_dniv_do_obslug_2
+            name: Днів до сервісу
+            icon: mdi:calendar
+          - type: section
+            label: Сервіс 3
+          - entity: sensor.datakom_device_godin_do_obslug_3
+            name: Годин до сервісу
+            icon: mdi:clock-outline
+          - entity: sensor.datakom_device_dniv_do_obslug_3
+            name: Днів до сервісу
+            icon: mdi:calendar
+      - type: entities
+        title: Лічильники
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_godini_roboti
+            name: Загальні мотогодини
+            icon: mdi:clock-digital
+          - entity: sensor.datakom_device_kilkist_zapuskiv
+            name: Кількість запусків
+            icon: mdi:counter
+          - entity: sensor.datakom_device_kilkist_prokrutok
+            name: Кількість прокруток
+            icon: mdi:rotate-right
+          - type: divider
+          - entity: sensor.datakom_device_zagalna_energiia_kvt_god
+            name: Вироблена енергія (kWh)
+            icon: mdi:lightning-bolt
+      - type: history-graph
+        title: Рівень палива (тиждень)
+        hours_to_show: 168
+        entities:
+          - entity: sensor.datakom_device_riven_paliva
+            name: Паливо
+      - type: entities
+        title: Системна інформація
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_lan_ip_adresa
+            name: IP адреса
+          - entity: sensor.datakom_device_unikalnii_id
+            name: Унікальний ID
+          - entity: sensor.datakom_device_mac_adresa
+            name: MAC адреса
+          - entity: binary_sensor.datakom_device_api_connection
+            name: API підключення

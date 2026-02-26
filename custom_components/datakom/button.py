@@ -28,28 +28,6 @@ async def async_setup_entry(
     if not api_url:
         _LOGGER.error(f"Datakom Button: missing api_url: {api_url}")
         return
-    
-    buttons = []
-    
-    # Добавляем кнопку перезагрузки
-    restart_button = DatakomRestartButton(api_url, device_name)
-    buttons.append(restart_button)
-    _LOGGER.debug(f"Datakom: Created restart button {restart_button.unique_id}")
-    
-    # Добавляем кнопки управления устройством
-    control_actions = ["run", "auto", "manual", "test", "stop"]
-    for action in control_actions:
-        control_button = DatakomControlButton(api_url, device_name, action)
-        buttons.append(control_button)
-        _LOGGER.debug(f"Datakom: Created control button {control_button.unique_id} for action {action}")
-    
-    if buttons:
-        _LOGGER.info(f"Datakom Button: Adding {len(buttons)} buttons")
-        async_add_entities(buttons, True)
-    else:
-        _LOGGER.warning("Datakom Button: No buttons were created")
-
-
 class DatakomRestartButton(ButtonEntity):
     """Button для перезагрузки устройства Datakom."""
 

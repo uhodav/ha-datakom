@@ -1,0 +1,399 @@
+title: Datakom Monitoring
+views:
+  - title: Моніторинг
+    icon: mdi:monitor-dashboard
+    cards:
+      - type: custom:button-card
+        entity: binary_sensor.datakom_device_api_connection
+        name: Зв'язок з API
+        icon: mdi:api
+        show_state: true
+        state:
+          - value: "on"
+            color: green
+            icon: mdi:check-network
+          - value: "off"
+            color: red
+            icon: mdi:close-network
+        styles:
+          card:
+            - height: 100px
+          name:
+                - entity: button.datakom_device_control_manual
+                  name: MANUAL
+                  icon: mdi:hand-back-left
+                  tap_action:
+                    action: toggle
+                - entity: button.datakom_device_control_test
+                  name: TEST
+                  icon: mdi:test-tube
+                  tap_action:
+                    action: toggle
+                - entity: button.datakom_device_control_run
+                  name: RUN
+                  icon: mdi:play
+                  tap_action:
+                    action: toggle
+                - entity: button.datakom_device_control_stop
+                  name: STOP
+                  icon: mdi:stop-circle
+                  tap_action:
+                    action: toggle
+                icon: mdi:engine
+              - value: "off"
+                color: gray
+                icon: mdi:engine-off
+            styles:
+              card:
+                - height: 120px
+          - type: custom:button-card
+            entity: binary_sensor.datakom_device_run
+            name: Робота
+            icon: mdi:run
+            show_state: false
+            state:
+              - value: "on"
+                color: green
+                icon: mdi:run-fast
+              - value: "off"
+                color: gray
+                icon: mdi:pause
+            styles:
+              card:
+                - height: 120px
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            entity: binary_sensor.datakom_device_auto
+            name: AUTO
+            icon: mdi:auto-mode
+            show_state: false
+            state:
+              - value: "on"
+                color: blue
+                icon: mdi:auto-mode
+              - value: "off"
+                color: gray
+                icon: mdi:auto-mode
+            styles:
+              card:
+                - height: 80px
+          - type: custom:button-card
+            entity: binary_sensor.datakom_device_manual
+            name: MANUAL
+            icon: mdi:hand-back-left
+            show_state: false
+            state:
+              - value: "on"
+                color: orange
+                icon: mdi:hand-back-left
+              - value: "off"
+                color: gray
+                icon: mdi:hand-back-left-outline
+            styles:
+              card:
+                - height: 80px
+          - type: custom:button-card
+            entity: binary_sensor.datakom_device_test
+            name: TEST
+            icon: mdi:test-tube
+            show_state: false
+            state:
+              - value: "on"
+                color: yellow
+                icon: mdi:test-tube
+              - value: "off"
+                color: gray
+                icon: mdi:test-tube-empty
+            styles:
+              card:
+                - height: 80px
+          - type: custom:button-card
+            entity: binary_sensor.datakom_device_stop
+            name: STOP
+            icon: mdi:stop-circle
+            show_state: false
+            state:
+              - value: "on"
+                color: red
+                icon: mdi:stop-circle
+              - value: "off"
+                color: gray
+                icon: mdi:stop-circle-outline
+            styles:
+              card:
+                - height: 80px
+      - type: entities
+        title: Стан системи
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_stan_generatora
+            name: Стан генератора
+            icon: mdi:information-outline
+          - entity: sensor.datakom_device_rezhim_roboti
+            name: Режим роботи
+            icon: mdi:cog-outline
+          - entity: sensor.datakom_device_stan_dviguna
+            name: Стан двигуна
+            icon: mdi:engine-outline
+          - entity: sensor.datakom_device_stan_vilki_generatora
+            name: Вилка генератора
+            icon: mdi:electric-switch
+          - entity: sensor.datakom_device_stan_vilki_merezhi
+            name: Вилка мережі
+            icon: mdi:electric-switch-closed
+      - type: alarm-panel
+        entity: binary_sensor.datakom_device_alarm_shutdown
+        name: Критичні аларми
+        states:
+          - arm_away
+          - arm_home
+      - type: entities
+        title: Аларми та попередження
+        show_header_toggle: false
+        state_color: true
+        entities:
+          - entity: binary_sensor.datakom_device_alarm_shutdown
+            name: Критична зупинка
+            icon: mdi:alert-octagon
+          - entity: binary_sensor.datakom_device_alarm_warning
+            name: Попередження
+            icon: mdi:alert
+          - entity: binary_sensor.datakom_device_alarm_loaddump
+            name: Скидання навантаження
+            icon: mdi:power-plug-off
+      - type: glance
+        title: Ключові параметри
+        columns: 3
+        show_name: true
+        show_state: true
+        entities:
+          - entity: sensor.datakom_device_oboroti_dviguna
+            name: RPM
+          - entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Temp
+          - entity: sensor.datakom_device_tisk_mastila
+            name: Масло
+          - entity: sensor.datakom_device_napryaga_akb
+            name: Батарея
+          - entity: sensor.datakom_device_riven_paliva
+            name: Паливо
+          - entity: sensor.datakom_device_chastota_generatora
+            name: Частота
+  - title: Графіки
+    icon: mdi:chart-line
+    cards:
+      - type: history-graph
+        title: Температура двигуна (24 год)
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - entity: sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+            name: Температура охолоджувальної рідини
+      - type: history-graph
+        title: Обороти двигуна (24 год)
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - entity: sensor.datakom_device_oboroti_dviguna
+            name: Обороти
+      - type: history-graph
+        title: Потужність (24 год)
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - entity: sensor.datakom_device_zagalna_povna_potuzhnist
+            name: Повна потужність
+          - entity: sensor.datakom_device_zagalna_aktivna_potuzhnist
+            name: Активна потужність
+      - type: history-graph
+        title: Рівень палива (24 год)
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - entity: sensor.datakom_device_riven_paliva
+            name: Рівень палива
+      - type: history-graph
+        title: Напруга батареї (24 год)
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - entity: sensor.datakom_device_napryaga_akb
+            name: Напруга АКБ
+      - type: history-graph
+        title: Тиск масла (24 год)
+        hours_to_show: 24
+        refresh_interval: 60
+        entities:
+          - entity: sensor.datakom_device_tisk_mastila
+            name: Тиск масла
+      - type: history-graph
+        title: Напруга фаз генератора (1 год)
+        hours_to_show: 1
+        refresh_interval: 30
+        entities:
+          - entity: sensor.datakom_device_generator_l1
+            name: L1
+          - entity: sensor.datakom_device_generator_l2
+            name: L2
+          - entity: sensor.datakom_device_generator_l3
+            name: L3
+      - type: history-graph
+        title: Струм фаз генератора (1 год)
+        hours_to_show: 1
+        refresh_interval: 30
+        entities:
+          - entity: sensor.datakom_device_generator_i1
+            name: I1
+          - entity: sensor.datakom_device_generator_i2
+            name: I2
+          - entity: sensor.datakom_device_generator_i3
+            name: I3
+  - title: Контроль
+    icon: mdi:gesture-tap-button
+    cards:
+      - type: entities
+        title: Керування генератором
+        show_header_toggle: false
+        entities:
+          - type: buttons
+            entities:
+              - entity: button.datakom_device_control_auto
+                name: AUTO
+                icon: mdi:auto-mode
+                tap_action:
+                  action: toggle
+              - entity: button.datakom_device_control_manual
+                name: MANUAL
+                icon: mdi:hand-back-left
+                tap_action:
+                  action: toggle
+          - type: buttons
+            entities:
+              - entity: button.datakom_device_control_test
+                name: TEST
+                icon: mdi:test-tube
+                tap_action:
+                  action: toggle
+              - entity: button.datakom_device_control_run
+                name: RUN
+                icon: mdi:play
+                tap_action:
+                  action: toggle
+          - type: buttons
+            entities:
+              - entity: button.datakom_device_control_stop
+                name: STOP
+                icon: mdi:stop-circle
+                tap_action:
+                  action: toggle
+              - entity: button.datakom_device_restart
+                name: RESTART
+                icon: mdi:restart
+                tap_action:
+                  action: toggle
+                  confirmation:
+                    text: Ви впевнені, що хочете перезапустити контролер?
+      - type: entities
+        title: Поточний стан
+        show_header_toggle: false
+        state_color: true
+        entities:
+          - entity: sensor.datakom_device_rezhim_roboti
+            name: Режим
+          - entity: sensor.datakom_device_stan_generatora
+            name: Стан
+          - entity: binary_sensor.datakom_device_run
+            name: Працює
+          - entity: binary_sensor.datakom_device_stop
+            name: Зупинений
+      - type: markdown
+        content: >
+          ## Опис режимів роботи
+
+          - **AUTO** - Автоматичний режим (запуск при зникненні мережі)
+
+          - **MANUAL** - Ручний режим (завжди працює)
+
+          - **TEST** - Тестовий режим (запуск для перевірки)
+
+          - **RUN** - Примусовий запуск
+
+          - **STOP** - Зупинка генератора
+
+          - **RESTART** - Перезапуск контролера
+
+
+          ⚠️ **Увага:** зміна режиму роботи може призвести до зупинки або запуску генератора!
+  - title: Статистика
+    icon: mdi:chart-box
+    cards:
+      - type: statistics-graph
+        title: Температура (тиждень)
+        stat_types:
+          - mean
+          - min
+          - max
+        period:
+          calendar:
+            period: week
+        entities:
+          - sensor.datakom_device_temperatura_okholodzhuvalnoi_ridini
+      - type: statistics-graph
+        title: Потужність (тиждень)
+        stat_types:
+          - mean
+          - min
+          - max
+        period:
+          calendar:
+            period: week
+        entities:
+          - sensor.datakom_device_zagalna_povna_potuzhnist
+      - type: statistics-graph
+        title: Рівень палива (місяць)
+        stat_types:
+          - mean
+          - min
+          - max
+        period:
+          calendar:
+            period: month
+        entities:
+          - sensor.datakom_device_riven_paliva
+      - type: entities
+        title: Лічильники роботи
+        show_header_toggle: false
+        entities:
+          - entity: sensor.datakom_device_godini_roboti
+            name: Мотогодини
+            icon: mdi:clock-digital
+          - entity: sensor.datakom_device_kilkist_zapuskiv
+            name: Запусків
+            icon: mdi:counter
+          - entity: sensor.datakom_device_kilkist_prokrutok
+            name: Прокруток
+            icon: mdi:rotate-right
+          - entity: sensor.datakom_device_zagalna_energiia_kvt_god
+            name: Вироблено енергії (kWh)
+            icon: mdi:lightning-bolt
+      - type: gauge
+        entity: sensor.datakom_device_godin_do_obslug_1
+        name: До сервісу 1
+        min: 0
+        max: 500
+        needle: true
+        severity:
+          red: 0
+          yellow: 50
+          green: 100
+      - type: gauge
+        entity: sensor.datakom_device_godin_do_obslug_2
+        name: До сервісу 2
+        min: 0
+        max: 1000
+        needle: true
+        severity:
+          red: 0
+          yellow: 100
+          green: 200

@@ -1,3 +1,42 @@
+  - action: run
+    label: RUN
+    image_on: /local/community/datakom/img/run-k.png
+    image_off: /local/community/datakom/img/run.png
+    indicator_entity: binary_sensor.run
+    indicator_color: green
+    button_entity: button.datakom_device_control_run  # Кнопка управления
+  
+  - action: auto
+    label: AUTO
+    image_on: /local/community/datakom/img/auto-k.png
+    image_off: /local/community/datakom/img/auto.png
+    indicator_entity: binary_sensor.auto
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_auto
+  
+  - action: manual
+    label: MAN
+    image_on: /local/community/datakom/img/manual-k.png
+    image_off: /local/community/datakom/img/manual.png
+    indicator_entity: binary_sensor.manual
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_manual
+  
+  - action: test
+    label: TEST
+    image_on: /local/community/datakom/img/test-k.png
+    image_off: /local/community/datakom/img/test.png
+    indicator_entity: binary_sensor.test
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_test
+  
+  - action: stop
+    label: STOP
+    image_on: /local/community/datakom/img/stop-k.png
+    image_off: /local/community/datakom/img/stop.png
+    indicator_entity: binary_sensor.stop
+    indicator_color: yellow
+    button_entity: button.datakom_device_control_stop
 # Datakom Controller Card
 
 Кастомная карточка для визуализации контроллера генератора Datakom в стиле оригинальной панели управления D500.
