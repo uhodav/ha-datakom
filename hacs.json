@@ -2,6 +2,7 @@
   "name": "Datakom listener",
   "content_in_root": false,
   "filename": "datakom-controller-card.js",
+  "url": "https://github.com/uhodav/ha-datakom",
   "render_readme": true,
   "country": ["UA"]
 }
