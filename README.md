@@ -35,13 +35,13 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
    - Make sure you know the API URL (e.g., `http://your-server:8765/api`)
 
 ### Home Assistant Integration
-1. Copy the `custom_components/datakom` folder to your Home Assistant `custom_components` directory
-2. Copy the `www/datakom` folder to your Home Assistant `config/www/` directory
+1. Copy the `custom_components/ha_datakom` folder to your Home Assistant `custom_components` directory
+2. Copy the `www/ha_datakom` folder to your Home Assistant `config/www/` directory
 3. Restart Home Assistant
 4. Add the Lovelace resources:
    - Go to **Settings → Dashboards → Resources → Add Resource**
-   - Add card: URL: `/local/datakom/datakom-controller-card.js`, Type: **JavaScript Module**
-   - Add editor: URL: `/local/datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
+   - Add card: URL: `/local/ha_datakom/datakom-controller-card.js`, Type: **JavaScript Module**
+   - Add editor: URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
    - Click **Create** for each
 5. Refresh your browser (Ctrl+F5)
 6. Go to **Settings → Devices & Services → Add Integration**
@@ -117,10 +117,10 @@ Parameters from the API are automatically converted to sensors:
 The integration includes a custom Datakom Controller Card that mimics the original D500 panel interface.
 
 ### Installation
-1. Copy `www/datakom` folder to `config/www/datakom/`
+1. Copy `www/ha_datakom` folder to `config/www/ha_datakom/`
 2. Add resources: **Settings → Dashboards → Resources**
-   - Card URL: `/local/datakom/datakom-controller-card.js`, Type: **JavaScript Module**
-   - Editor URL: `/local/datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
+   - Card URL: `/local/ha_datakom/datakom-controller-card.js`, Type: **JavaScript Module**
+   - Editor URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
 3. Refresh browser (Ctrl+F5)
 
 ### Usage
@@ -182,7 +182,7 @@ control_buttons:
     indicator_color: green
 ```
 
-See [www/datakom/README.md](www/datakom/README.md) for detailed card configuration.
+See [www/ha_datakom/README.md](www/ha_datakom/README.md) for detailed card configuration.
 
 ## Example Dashboard
 
@@ -211,7 +211,7 @@ entities:
 ```
 HA_datakom/
 ├── custom_components/
-│   └── datakom/
+│   └── ha_datakom/
 │       ├── __init__.py           # Integration initialization
 │       ├── sensor.py             # Sensor platform
 │       ├── binary_sensor.py      # Binary sensor platform
@@ -224,7 +224,7 @@ HA_datakom/
 │           ├── ru.json           # Russian translations
 │           └── uk.json           # Ukrainian translations
 ├── www/
-│   └── datakom/
+│   └── ha_datakom/
 │       ├── datakom-controller-card.js        # Custom Lovelace card
 │       ├── datakom-controller-card-editor.js # Visual editor
 │       ├── README.md             # Card documentation
@@ -238,7 +238,7 @@ HA_datakom/
 ## Troubleshooting
 
 ### Check Logs
-Go to **Settings → System → Logs** and search for `datakom` entries.
+Go to **Settings → System → Logs** and search for `ha_datakom` entries.
 
 ### Common Issues
 - **Sensors not updating**: Check API URL and network connectivity
@@ -337,13 +337,13 @@ This integration is provided as-is for monitoring Datakom generator controllers.
    - Переконайтеся, що ви знаєте URL API (наприклад, `http://your-server:8765/api`)
 
 ### Інтеграція Home Assistant
-1. Скопіюйте папку `custom_components/datakom` до директорії `custom_components` вашого Home Assistant
-2. Скопіюйте папку `www/datakom` до `config/www/` вашого Home Assistant
+1. Скопіюйте папку `custom_components/ha_datakom` до директорії `custom_components` вашого Home Assistant
+2. Скопіюйте папку `www/ha_datakom` до `config/www/` вашого Home Assistant
 3. Перезапустіть Home Assistant
 4. Додайте Lovelace ресурси:
    - Перейдіть до **Налаштування → Панелі → Ресурси → Додати ресурс**
-   - Додайте картку: URL: `/local/datakom/datakom-controller-card.js`, Тип: **JavaScript Module**
-   - Додайте редактор: URL: `/local/datakom/datakom-controller-card-editor.js`, Тип: **JavaScript Module**
+   - Додайте картку: URL: `/local/ha_datakom/datakom-controller-card.js`, Тип: **JavaScript Module**
+   - Додайте редактор: URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Тип: **JavaScript Module**
    - Натисніть **Створити** для кожного
 5. Оновіть браузер (Ctrl+F5)
 6. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
@@ -441,7 +441,7 @@ entities:
 ```
 HA_datakom/
 ├── custom_components/
-│   └── datakom/
+│   └── ha_datakom/
 │       ├── __init__.py           # Ініціалізація інтеграції
 │       ├── sensor.py             # Платформа сенсорів
 │       ├── binary_sensor.py      # Платформа бінарних сенсорів
@@ -454,7 +454,7 @@ HA_datakom/
 │           ├── ru.json           # Російські переклади
 │           └── uk.json           # Українські переклади
 ├── www/
-│   └── datakom/
+│   └── ha_datakom/
 │       ├── datakom-controller-card.js        # Користувацька картка Lovelace
 │       ├── datakom-controller-card-editor.js # Візуальний редактор
 │       ├── README.md             # Документація картки
@@ -468,7 +468,7 @@ HA_datakom/
 ## Усунення несправностей
 
 ### Перевірка логів
-Перейдіть до **Налаштування → Система → Логи** та шукайте записи `datakom`.
+Перейдіть до **Налаштування → Система → Логи** та шукайте записи `ha_datakom`.
 
 ### Поширені проблеми
 - **Сенсори не оновлюються**: Перевірте URL API та підключення до мережі

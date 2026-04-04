@@ -1,10 +1,12 @@
 {
-  "domain": "datakom",
+  "domain": "ha_datakom",
   "name": "Datakom listener",
+  "codeowners": [
+    "@uhodav"
+  ],
+  "config_flow": true,
   "documentation": "https://github.com/uhodav/ha-datakom",
   "requirements": [],
-  "codeowners": [],
   "version": "2.0.0",
-  "iot_class": "cloud_polling",
-  "config_flow": true
+  "iot_class": "cloud_polling"
 }

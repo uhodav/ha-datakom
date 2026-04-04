@@ -1,6 +1,6 @@
 # Конфигурация для Datakom WebSocket интеграции
 
 # Регистрируем компонент с настройками
-datakom:
+ha_datakom:
   # URL API Datakom (по умолчанию используется https://google.com/datakom/api/)
   api_url: ""
