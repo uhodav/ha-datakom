@@ -28,6 +28,9 @@ async def async_setup_entry(
     if not api_url:
         _LOGGER.error(f"Datakom Button: missing api_url: {api_url}")
         return
+
+    # Добавляем кнопку перезапуска
+    async_add_entities([DatakomRestartButton(api_url, device_name)])
 class DatakomRestartButton(ButtonEntity):
     """Button для перезагрузки устройства Datakom."""
 
