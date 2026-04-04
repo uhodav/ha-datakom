@@ -348,11 +348,11 @@ class DatakomControllerCardEditor extends HTMLElement {
         </div>
         <div class="option">
           <label>Image ON (active state)</label>
-          <input type="text" data-type="button" data-index="${index}" data-field="image_on" value="${button.image_on || ''}" placeholder="/local/community/datakom/img/auto-k.png" />
+          <input type="text" data-type="button" data-index="${index}" data-field="image_on" value="${button.image_on || ''}" placeholder="/local/community/ha_datakom/img/auto-k.png" />
         </div>
         <div class="option">
           <label>Image OFF (inactive state)</label>
-          <input type="text" data-type="button" data-index="${index}" data-field="image_off" value="${button.image_off || ''}" placeholder="/local/community/datakom/img/auto.png" />
+          <input type="text" data-type="button" data-index="${index}" data-field="image_off" value="${button.image_off || ''}" placeholder="/local/community/ha_datakom/img/auto.png" />
         </div>
         <div class="grid-2">
           <div class="option">

@@ -3,7 +3,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-DOMAIN = "datakom"
+DOMAIN = "ha_datakom"
 _LOGGER = logging.getLogger(__name__)
 
 __all__ = ["DOMAIN", "_cleanup_old_entities"]
