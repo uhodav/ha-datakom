@@ -7,6 +7,9 @@
 
 ---
 
+
+[![Add to HACS](https://img.shields.io/badge/HACS-Add%20This%20Integration-blue?logo=home-assistant&style=for-the-badge)](https://my.home-assistant.io/redirect/hacs_repository/?owner=uhodav&repository=ha-datakom&category=integration)
+
 # Datakom listener Integration for Home Assistant
 
 Custom integration for monitoring Datakom generator controllers via REST API. Supports multi-language interface (English, Russian, Ukrainian), ENUM sensors with localized states, and calculated sensors for fuel efficiency and battery health monitoring.

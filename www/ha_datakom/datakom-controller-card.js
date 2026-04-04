@@ -1,7 +1,29 @@
 class DatakomControllerCard extends HTMLElement {
+  static _resourceCheckDone = false;
+  static _resourceWarningShown = false;
+
+  static checkResourceLoaded() {
+    if (this._resourceCheckDone) return;
+    this._resourceCheckDone = true;
+    // Проверяем, зарегистрирован ли кастомный элемент
+    if (!window.customCards || !window.customCards.some(card => card.type === 'datakom-controller-card')) {
+      if (!this._resourceWarningShown) {
+        this._resourceWarningShown = true;
+        // Показываем предупреждение в UI
+        const warning = document.createElement('div');
+        warning.style.cssText = 'background:#e74c3c;color:#fff;padding:16px;border-radius:8px;font-size:16px;text-align:center;margin:16px 0;z-index:9999;';
+        warning.innerHTML = '⚠️ Datakom Controller Card не подключена как ресурс Lovelace!<br>Добавьте <b>/local/ha_datakom/datakom-controller-card.js</b> в ресурсы Lovelace.';
+        // Вставляем предупреждение в начало body
+        document.body.prepend(warning);
+        // Также лог в консоль
+        console.warn('Datakom Controller Card не подключена как ресурс Lovelace! Добавьте /local/ha_datakom/datakom-controller-card.js в ресурсы Lovelace.');
+      }
+    }
+  }
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    DatakomControllerCard.checkResourceLoaded();
   }
 
   setConfig(config) {

@@ -37,6 +37,9 @@
     indicator_entity: binary_sensor.stop
     indicator_color: yellow
     button_entity: button.datakom_device_control_stop
+
+[![Add to HACS](https://img.shields.io/badge/HACS-Add%20This%20Card-blue?logo=home-assistant&style=for-the-badge)](https://my.home-assistant.io/redirect/hacs_repository/?owner=uhodav&repository=ha-datakom&category=plugin)
+
 # Datakom Controller Card
 
 Кастомная карточка для визуализации контроллера генератора Datakom в стиле оригинальной панели управления D500.
@@ -49,6 +52,11 @@
 3. Нажмите "+" и найдите "Datakom Controller Card"
 4. Установите карточку
 5. Перезагрузите Home Assistant
+6. Если ресурс не добавился автоматически, добавьте его вручную:
+  - **Settings → Dashboards → Resources → Add Resource**
+  - URL: `/local/ha_datakom/datakom-controller-card.js`, Type: **JavaScript Module**
+  - URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
+7. Обновите страницу браузера (Ctrl+F5)
 
 ### Вариант 2: Вручную
 1. Скопируйте содержимое папки `www` в `config/www/datakom/`:
