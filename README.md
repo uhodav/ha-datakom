@@ -80,7 +80,7 @@ Parameters from the API are automatically converted to sensors:
 - And many more...
 
 ### ENUM Sensors (with localized states)
-- **`sensor.genset_mode`** - Control mode (Stop, Auto, Manual, Test, Auto-Start, Remote, Schedule, Maintenance, Emergency)
+- **`sensor.genset_mode`** - Control mode (Stop, Manual, Auto, Test)
 - **`sensor.genset_state`** - Operational state (26 states: At Rest, Cranking, Running, Cooling Down, etc.)
 - **`sensor.engine_state`** - Engine status (Off, Cranking, Running, Warming Up, Cooling, etc.)
 - **`sensor.breaker_state`** - Circuit breaker position
@@ -382,7 +382,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - Та багато інших...
 
 ### ENUM сенсори (з локалізованими станами)
-- **`sensor.genset_mode`** - Режим управління (Зупинка, Авто, Ручний, Тест, Авто-запуск, Дистанційний, Розклад, Обслуговування, Аварійний)
+- **`sensor.genset_mode`** - Режим управління (Зупинка, Ручний, Авто, Тест)
 - **`sensor.genset_state`** - Операційний стан (26 станів: У стані спокою, Прокрутка, Робота, Охолодження тощо)
 - **`sensor.engine_state`** - Стан двигуна (Вимкнено, Прокрутка, Робота, Прогрів, Охолодження тощо)
 - **`sensor.breaker_state`** - Положення автоматичного вимикача

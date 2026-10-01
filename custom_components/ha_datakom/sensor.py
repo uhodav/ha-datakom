@@ -21,13 +21,10 @@ from . import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 # Маппинг режимов генератора (число -> текстовый ключ)
+# Значения регистра Modbus 10605 "Unit mode" (битовая маска)
 GENSET_MODE_MAP = {
-    "0": "stop", "1": "auto", "2": "manual", "3": "test",
-    "4": "auto_start", "5": "remote", "6": "schedule",
-    "7": "maintenance", "8": "emergency",
-    0: "stop", 1: "auto", 2: "manual", 3: "test",
-    4: "auto_start", 5: "remote", 6: "schedule",
-    7: "maintenance", 8: "emergency",
+    "1": "stop", "2": "manual", "4": "auto", "8": "test",
+    1: "stop", 2: "manual", 4: "auto", 8: "test",
 }
 
 # Маппинг состояния генератора
@@ -110,9 +107,12 @@ CHARGE_STATE_MAP = {
     2048: "unknown",
 }
 
+# Тип ENUM по ID параметра API (не зависит от языка названия)
+ENUM_BY_PARAM_ID = {"103": "genset_mode", "105": "genset_state", "624": "charge_state"}
+
 # Словарь для сопоставления ключевых слов с маппингами
 ENUM_MAPPINGS = {
-    "genset_mode": (GENSET_MODE_MAP, ["stop", "auto", "manual", "test", "auto_start", "remote", "schedule", "maintenance", "emergency"]),
+    "genset_mode": (GENSET_MODE_MAP, ["stop", "manual", "auto", "test"]),
     "genset_state": (GENSET_STATE_MAP, [
         "at_rest", "wait_before_fuel", "engine_preheat", "wait_oil_flash_off",
         "crank_rest", "cranking", "engine_run_idle", "engine_heating",
@@ -243,13 +243,16 @@ class DatakomParamSensor(SensorEntity):
         self._attr_should_poll = True
         self._hass = None
         
-        # Автоопределение типа ENUM сенсора по названию
+        # Автоопределение типа ENUM сенсора: сначала по ID параметра (название может быть
+        # переведено - "Режим роботи"), затем по английскому названию
         label_lower = label.lower()
-        self._enum_type = None
+        self._enum_type = ENUM_BY_PARAM_ID.get(str(param_id))
         self._enum_map = None
         
+        if self._enum_type:
+            pass
         # Genset Mode
-        if "mode" in label_lower and ("genset" in label_lower or "generator" in label_lower):
+        elif "mode" in label_lower and ("genset" in label_lower or "generator" in label_lower):
             self._enum_type = "genset_mode"
         # Genset State
         elif "state" in label_lower and ("genset" in label_lower or "generator" in label_lower):

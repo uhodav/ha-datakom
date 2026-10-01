@@ -172,6 +172,10 @@ class DatakomHealthBinarySensor(BinarySensorEntity):
                 self._health_data = {}
 
 
+# LED режима -> значение параметра 103 (Genset Mode, Modbus 10605 Unit mode)
+GENSET_MODE_LEDS = {"stop": 1, "manual": 2, "auto": 4, "test": 8}
+
+
 class DatakomLedBinarySensor(BinarySensorEntity):
     """Binary sensor для отображения состояния LED индикатора Datakom."""
 
@@ -287,7 +291,7 @@ class DatakomLedBinarySensor(BinarySensorEntity):
                         # ID параметров (из примера API):
                         # 103 = Genset Mode
                         # 105 = Genset State
-                        genset_mode = params.get("103", 0)
+                        genset_mode = params.get("103")
                         genset_state = params.get("105", 0)
                         
                         # Вычисляем состояние LED в зависимости от типа
@@ -297,21 +301,12 @@ class DatakomLedBinarySensor(BinarySensorEntity):
                         elif self._led_name == "genset":
                             # Genset горит когда генератор работает (не at_rest)
                             self._state = 1 if genset_state != 0 else 0
-                        elif self._led_name == "auto":
-                            # Auto горит когда режим = AUTO (1) или AUTO_START (4)
-                            self._state = 1 if genset_mode in [1, 4] else 0
-                        elif self._led_name == "manual":
-                            # Manual горит когда режим = MANUAL (2)
-                            self._state = 1 if genset_mode == 2 else 0
-                        elif self._led_name == "test":
-                            # Test горит когда режим = TEST (3)
-                            self._state = 1 if genset_mode == 3 else 0
+                        elif self._led_name in GENSET_MODE_LEDS:
+                            # Режим (Modbus 10605): 1=STOP, 2=MANUAL, 4=AUTO, 8=TEST
+                            self._state = 1 if genset_mode == GENSET_MODE_LEDS[self._led_name] else 0
                         elif self._led_name == "run":
                             # Run горит когда генератор работает (state != 0)
                             self._state = 1 if genset_state != 0 else 0
-                        elif self._led_name == "stop":
-                            # Stop горит когда режим = STOP (0)
-                            self._state = 1 if genset_mode == 0 else 0
                         elif self._led_name == "alarm":
                             # Alarm горит если есть активные алармы
                             # Проверяем через отдельный запрос к alarm endpoint
