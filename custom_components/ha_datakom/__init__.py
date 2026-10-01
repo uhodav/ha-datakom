@@ -40,7 +40,9 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
             "datakom_led_test", "datakom_led_run", "datakom_led_stop", "datakom_led_alarm",
             "datakom_alarm_shutdown", "datakom_alarm_loaddump", "datakom_alarm_warning"
         }
-        valid_button_ids = {}
+        valid_button_ids = {"datakom_restart"}
+        if entry.data.get("control_key"):
+            valid_button_ids |= {f"datakom_control_{a}" for a in ("stop", "auto", "manual", "test")}
         
         removed_count = 0
         for entity in entities:

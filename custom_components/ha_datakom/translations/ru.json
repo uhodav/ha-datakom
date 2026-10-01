@@ -7,11 +7,13 @@
         "description": "Введите URL API и интервал обновления.",
         "data": {
           "api_url": "URL API",
-          "update_interval": "Интервал обновления (минуты)"
+          "update_interval": "Интервал обновления (минуты)",
+          "control_key": "Ключ управления (необязательно)"
         },
         "data_description": {
           "api_url": "Базовый URL API, например https://example.com/datakom/api",
-          "update_interval": "Как часто обновлять данные (1-60 минут)"
+          "update_interval": "Как часто обновлять данные (1-60 минут)",
+          "control_key": "X-API-Key для кнопок управления генератором. Без ключа кнопки не создаются."
         }
       },
       "device": {
@@ -318,6 +320,30 @@
       },
       "control_stop": {
         "name": "Стоп"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "api": {
+        "title": "Шаг 1: Настройка API",
+        "data": {
+          "api_url": "URL API",
+          "update_interval": "Интервал обновления (минуты)",
+          "control_key": "Ключ управления (необязательно)"
+        },
+        "data_description": {
+          "api_url": "Базовый URL API, например https://example.com/datakom/api",
+          "update_interval": "Как часто обновлять данные (1-60 минут)",
+          "control_key": "X-API-Key для кнопок управления генератором. Без ключа кнопки не создаются."
+        }
+      },
+      "params": {
+        "title": "Шаг 3: Выбор параметров",
+        "description": "Выберите параметры, для которых будут созданы сенсоры.",
+        "data": {
+          "param_ids": "Параметры"
+        }
       }
     }
   }

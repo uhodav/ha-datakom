@@ -7,11 +7,13 @@
         "description": "Enter the API URL and update interval.",
         "data": {
           "api_url": "API URL",
-          "update_interval": "Update interval (minutes)"
+          "update_interval": "Update interval (minutes)",
+          "control_key": "Control key (optional)"
         },
         "data_description": {
           "api_url": "Base API URL, e.g. https://example.com/datakom/api",
-          "update_interval": "How often to fetch data (1-60 minutes)"
+          "update_interval": "How often to fetch data (1-60 minutes)",
+          "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created."
         }
       },
       "device": {
@@ -318,6 +320,30 @@
       },
       "control_stop": {
         "name": "Stop"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "api": {
+        "title": "Step 1: API setup",
+        "data": {
+          "api_url": "API URL",
+          "update_interval": "Update interval (minutes)",
+          "control_key": "Control key (optional)"
+        },
+        "data_description": {
+          "api_url": "Base API URL, e.g. https://example.com/datakom/api",
+          "update_interval": "How often to fetch data (1-60 minutes)",
+          "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created."
+        }
+      },
+      "params": {
+        "title": "Step 3: Select parameters",
+        "description": "Choose the parameters to create sensors for.",
+        "data": {
+          "param_ids": "Parameters"
+        }
       }
     }
   }

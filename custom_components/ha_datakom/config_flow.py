@@ -35,6 +35,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.api_url = api_url
                 self.update_interval = update_interval
                 self.language = language
+                self.control_key = user_input.get("control_key", "").strip()
                 # Проверяем доступность API
                 url = f"{api_url}/health"
                 try:
@@ -82,6 +83,10 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
+                ),
+                # Ключ керування (X-API-Key); без нього кнопки керування не створюються
+                vol.Optional("control_key", default=""): selector.TextSelector(
+                    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
                 ),
             }),
             errors=errors,
@@ -134,6 +139,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "language": language,
                     "param_ids": selected_params,
                     "device_name": "Datakom Device",
+                    "control_key": getattr(self, "control_key", ""),
                 }
                 _LOGGER.debug(f"Datakom: Creating entry with data: {entry_data}")
                 return self.async_create_entry(
@@ -186,6 +192,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     self.api_url = api_url
                     self.update_interval = update_interval
                     self.language = language
+                    self.control_key = user_input.get("control_key", "").strip()
                     return await self.async_step_params()
         except Exception as e:
             _LOGGER.error(f"Datakom Options: Error in async_step_api: {e}", exc_info=True)
@@ -213,6 +220,9 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
+                ),
+                vol.Optional("control_key", default=current_data.get("control_key", "")): selector.TextSelector(
+                    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
                 ),
             }),
             errors=errors,
@@ -271,6 +281,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                         "language": self.language,
                         "param_ids": cleaned_params,
                         "device_name": current_data.get("device_name", "Datakom Device"),
+                        "control_key": getattr(self, "control_key", current_data.get("control_key", "")),
                     }
                     _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")
                     self.hass.config_entries.async_update_entry(

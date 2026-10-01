@@ -7,10 +7,14 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 
 from . import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# Дії, дозволені API за замовчуванням (genset/mains - перемикання навантаження - вимкнені)
+CONTROL_ACTIONS = ["stop", "auto", "manual", "test"]
 
 
 async def async_setup_entry(
@@ -29,8 +33,12 @@ async def async_setup_entry(
         _LOGGER.error(f"Datakom Button: missing api_url: {api_url}")
         return
 
-    # Добавляем кнопку перезапуска
-    async_add_entities([DatakomRestartButton(api_url, device_name)])
+    entities = [DatakomRestartButton(api_url, device_name)]
+    # Кнопки керування створюються лише коли задано ключ керування (X-API-Key)
+    control_key = entry_data.get("control_key", "")
+    if control_key:
+        entities += [DatakomControlButton(api_url, device_name, action, control_key) for action in CONTROL_ACTIONS]
+    async_add_entities(entities)
 class DatakomRestartButton(ButtonEntity):
     """Button для перезагрузки устройства Datakom."""
 
@@ -83,10 +91,13 @@ class DatakomRestartButton(ButtonEntity):
 class DatakomControlButton(ButtonEntity):
     """Button для управления устройством Datakom (Run/Auto/Manual/Test/Stop)."""
 
-    def __init__(self, api_url, device_name, action):
+    def __init__(self, api_url, device_name, action, control_key):
         self._api_url = api_url
         self._device_name = device_name
         self._action = action
+        self._control_key = control_key
+        # Фиксированный entity_id: на него ссылается карточка datakom-controller-card
+        self.entity_id = f"button.datakom_device_control_{action}"
         self._attr_has_entity_name = True
         self._attr_name = action.capitalize()
         self._attr_unique_id = f"datakom_control_{action}"
@@ -123,22 +134,21 @@ class DatakomControlButton(ButtonEntity):
     async def async_press(self) -> None:
         """Обработка нажатия кнопки управления."""
         url = f"{self._api_url}/device/control"
-        payload = {
-            "did": int(self._device_id),
-            "action": self._action
-        }
         _LOGGER.info(f"Datakom: Sending control command {self._action} to {url}")
-        
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=payload, timeout=30) as resp:
-                    text = await resp.text()
-                    _LOGGER.debug(f"Datakom: control response: {text}")
-                    data = await resp.json()
-                    
-                    if data.get("success"):
-                        _LOGGER.info(f"Datakom: Control command {self._action} successful")
-                    else:
-                        _LOGGER.error(f"Datakom: Control command {self._action} failed, response: {data}")
-            except Exception as e:
-                _LOGGER.error(f"Datakom: Control button {self._attr_unique_id} request error: {e}")
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url,
+                    json={"action": self._action},
+                    headers={"X-API-Key": self._control_key},
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    data = await resp.json(content_type=None)
+        except Exception as e:
+            _LOGGER.error(f"Datakom: Control button {self._attr_unique_id} request error: {e}")
+            raise HomeAssistantError(f"Datakom: команда {self._action} не відправлена: {e}") from e
+
+        if not data.get("success"):
+            _LOGGER.error(f"Datakom: Control command {self._action} failed, response: {data}")
+            raise HomeAssistantError(f"Datakom: команда {self._action} не виконана: {data.get('error')}")
+        _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")

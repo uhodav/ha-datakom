@@ -57,6 +57,7 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 - **API URL**: Base URL of your Datakom REST API (e.g., `https://example.com/datakom/api`)
 - **Update Interval**: How often to fetch data (1-60 minutes)
 - **Language**: Select interface language (Українська/English/Русский) - auto-detected from Home Assistant language
+- **Control key** (optional): the `X-API-Key` of the Datakom API server, required for the control buttons (Stop/Auto/Manual/Test). This is the API server's own key from its `data/control_key` file — not a Datakom/Rainbow/SCADA password; how to generate it: [datakom_listener → Remote Control](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Leave empty for monitoring only — control buttons are then not created. Can be changed later in the integration options.
 
 ### Step 2: Parameter Selection
 - Choose which parameters to monitor (multiple selection supported)
@@ -103,7 +104,7 @@ Parameters from the API are automatically converted to sensors:
 - **`binary_sensor.api_connection`** - API connection status
 - **`binary_sensor.mains`** - Mains power LED status (calculated: on when generator is not running)
 - **`binary_sensor.genset`** - Generator LED status (calculated: on when generator is running)
-- **`binary_sensor.auto`** - Auto mode LED (calculated: on when mode is AUTO or AUTO_START)
+- **`binary_sensor.auto`** - Auto mode LED (calculated: on when mode is AUTO)
 - **`binary_sensor.manual`** - Manual mode LED (calculated: on when mode is MANUAL)
 - **`binary_sensor.alarm`** - Alarm LED (calculated: on when any alarm is active)
 - **`binary_sensor.alarm_shutdown`** - Shutdown alarms
@@ -114,6 +115,7 @@ Parameters from the API are automatically converted to sensors:
 
 ### Buttons
 - **`button.restart`** - Restart device controller
+- **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`** - Controller pushbuttons (created only when a control key is set). The press waits for the controller confirmation; on failure Home Assistant shows an error.
 
 ## Custom Lovelace Card
 
@@ -260,6 +262,7 @@ For installation and configuration, see: [https://github.com/uhodav/datakom_list
 - `/dump_devm?id={param_id}` - Get specific parameter value
 - `/dump_devm` - Get all parameters (used for calculated sensors and LED states)
 - `/dump_devm_alarm` - Get active alarm signals
+- `POST /device/control` - Controller pushbuttons, sent with header `X-API-Key` (only when a control key is set)
 
 ### Response Structure
 
@@ -359,6 +362,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **URL API**: Базова URL вашого Datakom REST API (наприклад, `https://example.com/datakom/api`)
 - **Інтервал оновлення**: Як часто оновлювати дані (1-60 хвилин)
 - **Мова**: Виберіть мову інтерфейсу (Українська/English/Русский) - автоматично визначається з мови Home Assistant
+- **Ключ керування** (необов'язково): `X-API-Key` сервера Datakom API, потрібен для кнопок керування (Стоп/Авто/Ручний/Тест). Це власний ключ API-сервера з його файлу `data/control_key` — не пароль Datakom/Rainbow/SCADA; як згенерувати: [datakom_listener → Дистанційне керування](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Залиште порожнім лише для моніторингу — тоді кнопки керування не створюються. Можна змінити пізніше в параметрах інтеграції.
 
 ### Крок 2: Вибір параметрів
 - Виберіть параметри для моніторингу (підтримується множинний вибір)
@@ -405,7 +409,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **`binary_sensor.api_connection`** - Стан підключення до API
 - **`binary_sensor.mains`** - Стан LED мережі (розраховується: увімкнено коли генератор не працює)
 - **`binary_sensor.genset`** - Стан LED генератора (розраховується: увімкнено коли генератор працює)
-- **`binary_sensor.auto`** - LED автоматичного режиму (розраховується: увімкнено в режимі AUTO або AUTO_START)
+- **`binary_sensor.auto`** - LED автоматичного режиму (розраховується: увімкнено в режимі AUTO)
 - **`binary_sensor.manual`** - LED ручного режиму (розраховується: увімкнено в режимі MANUAL)
 - **`binary_sensor.alarm`** - LED аварії (розраховується: увімкнено при наявності активних аварій)
 - **`binary_sensor.alarm_shutdown`** - Аварії вимкнення
@@ -416,6 +420,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Кнопки
 - **`button.restart`** - Перезапуск контролера пристрою
+- **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`** - Кнопки контролера (створюються лише коли задано ключ керування). Натискання чекає підтвердження від контролера; у разі помилки Home Assistant показує повідомлення.
 
 ## Приклад панелі
 
@@ -490,6 +495,7 @@ HA_datakom/
 - `/dump_devm?id={param_id}` - Отримання значення конкретного параметра
 - `/dump_devm` - Отримання всіх параметрів (використовується для розрахункових сенсорів та станів LED)
 - `/dump_devm_alarm` - Отримання активних аварійних сигналів
+- `POST /device/control` - Кнопки контролера, надсилається із заголовком `X-API-Key` (лише коли задано ключ керування)
 
 ### Ключові ID параметрів
 - `103` - Режим генератора (0=Стоп, 1=Авто, 2=Ручний, 4=Авто-запуск тощо)
