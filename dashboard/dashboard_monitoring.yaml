@@ -287,13 +287,11 @@ views:
                 icon: mdi:stop-circle
                 tap_action:
                   action: toggle
-              - entity: button.datakom_device_restart
-                name: RESTART
-                icon: mdi:restart
+              - entity: button.datakom_device_refresh
+                name: REFRESH
+                icon: mdi:refresh
                 tap_action:
                   action: toggle
-                  confirmation:
-                    text: Ви впевнені, що хочете перезапустити контролер?
       - type: entities
         title: Поточний стан
         show_header_toggle: false

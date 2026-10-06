@@ -256,6 +256,9 @@
       },
       "digital_outputs": {
         "name": "Цифрові виходи"
+      },
+      "data_age": {
+        "name": "Вік даних"
       }
     },
     "binary_sensor": {
@@ -320,6 +323,9 @@
       },
       "control_stop": {
         "name": "Стоп"
+      },
+      "refresh": {
+        "name": "Оновити"
       }
     }
   },

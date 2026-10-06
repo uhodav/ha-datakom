@@ -256,6 +256,9 @@
       },
       "digital_outputs": {
         "name": "Digital Outputs"
+      },
+      "data_age": {
+        "name": "Data age"
       }
     },
     "binary_sensor": {
@@ -320,6 +323,9 @@
       },
       "control_stop": {
         "name": "Stop"
+      },
+      "refresh": {
+        "name": "Refresh"
       }
     }
   },

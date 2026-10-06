@@ -256,6 +256,9 @@
       },
       "digital_outputs": {
         "name": "Цифровые выходы"
+      },
+      "data_age": {
+        "name": "Возраст данных"
       }
     },
     "binary_sensor": {
@@ -320,6 +323,9 @@
       },
       "control_stop": {
         "name": "Стоп"
+      },
+      "refresh": {
+        "name": "Обновить"
       }
     }
   },

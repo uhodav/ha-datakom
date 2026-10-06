@@ -3,6 +3,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
+from .coordinator import DatakomCoordinator
+
 DOMAIN = "ha_datakom"
 _LOGGER = logging.getLogger(__name__)
 
@@ -10,8 +12,16 @@ __all__ = ["DOMAIN", "_cleanup_old_entities"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Datakom from a config entry (UI)."""
+    coordinator = DatakomCoordinator(
+        hass,
+        api_url=entry.data.get("api_url", ""),
+        language=entry.data.get("language", "uk"),
+        update_interval_min=int(entry.data.get("update_interval", 5)),
+    )
+    await coordinator.async_config_entry_first_refresh()
+    
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry.data
+    hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator, "data": entry.data}
     
     # Удаляем старые entity перед созданием новых
     await _cleanup_old_entities(hass, entry)
@@ -40,7 +50,8 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
             "datakom_led_test", "datakom_led_run", "datakom_led_stop", "datakom_led_alarm",
             "datakom_alarm_shutdown", "datakom_alarm_loaddump", "datakom_alarm_warning"
         }
-        valid_button_ids = {"datakom_restart"}
+        valid_sensor_ids = {"datakom_data_age"}
+        valid_button_ids = {"datakom_refresh"}
         if entry.data.get("control_key"):
             valid_button_ids |= {f"datakom_control_{a}" for a in ("stop", "auto", "manual", "test")}
         
@@ -50,7 +61,9 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
             
             if entity.domain == "sensor":
                 # Для sensor: удаляем если unique_id не в формате datakom_{число} или число не в param_ids
-                if entity.unique_id.startswith("datakom_"):
+                if entity.unique_id in valid_sensor_ids:
+                    pass
+                elif entity.unique_id.startswith("datakom_"):
                     parts = entity.unique_id.split("_", 1)
                     if len(parts) == 2 and parts[1].isdigit():
                         param_id = int(parts[1])

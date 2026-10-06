@@ -4,6 +4,7 @@ import aiohttp
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.event import async_call_later
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
@@ -33,24 +34,25 @@ async def async_setup_entry(
         _LOGGER.error(f"Datakom Button: missing api_url: {api_url}")
         return
 
-    entities = [DatakomRestartButton(api_url, device_name)]
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    entities = [DatakomRefreshButton(coordinator, device_name)]
     # Кнопки керування створюються лише коли задано ключ керування (X-API-Key)
     control_key = entry_data.get("control_key", "")
     if control_key:
-        entities += [DatakomControlButton(api_url, device_name, action, control_key) for action in CONTROL_ACTIONS]
+        entities += [DatakomControlButton(api_url, device_name, action, control_key, coordinator) for action in CONTROL_ACTIONS]
     async_add_entities(entities)
-class DatakomRestartButton(ButtonEntity):
-    """Button для перезагрузки устройства Datakom."""
+class DatakomRefreshButton(ButtonEntity):
+    """Button для немедленного обновления данных Datakom."""
 
-    def __init__(self, api_url, device_name):
-        self._api_url = api_url
+    def __init__(self, coordinator, device_name):
+        self._coordinator = coordinator
         self._device_name = device_name
         self._attr_has_entity_name = True
-        self._attr_name = "Restart"
-        self._attr_unique_id = "datakom_restart"
-        self._attr_translation_key = "restart"
+        self._attr_name = "Refresh"
+        self._attr_unique_id = "datakom_refresh"
+        self._attr_translation_key = "refresh"
         self._attr_entity_category = EntityCategory.CONFIG
-        self._attr_icon = "mdi:restart"
+        self._attr_icon = "mdi:refresh"
 
     @property
     def device_info(self):
@@ -65,34 +67,20 @@ class DatakomRestartButton(ButtonEntity):
     def extra_state_attributes(self) -> dict:
         return {
             "device_name": self._device_name,
-            "description": "Restart the Datakom device",
+            "description": "Refresh Datakom data",
         }
 
     async def async_press(self) -> None:
-        """Обработка нажатия кнопки перезагрузки."""
-        url = f"{self._api_url}/restart"
-        _LOGGER.info(f"Datakom: Sending restart command to {url}")
-        
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(url, timeout=30) as resp:
-                    text = await resp.text()
-                    _LOGGER.debug(f"Datakom: restart response: {text}")
-                    data = await resp.json()
-                    
-                    if data.get("success"):
-                        _LOGGER.info(f"Datakom: Restart command successful")
-                    else:
-                        _LOGGER.error(f"Datakom: Restart command failed, response: {data}")
-            except Exception as e:
-                _LOGGER.error(f"Datakom: Restart button {self._attr_unique_id} request error: {e}")
+        """Обработка нажатия кнопки обновления."""
+        await self._coordinator.async_request_refresh()
 
 
 class DatakomControlButton(ButtonEntity):
     """Button для управления устройством Datakom (Run/Auto/Manual/Test/Stop)."""
 
-    def __init__(self, api_url, device_name, action, control_key):
+    def __init__(self, api_url, device_name, action, control_key, coordinator):
         self._api_url = api_url
+        self._coordinator = coordinator
         self._device_name = device_name
         self._action = action
         self._control_key = control_key
@@ -151,4 +139,10 @@ class DatakomControlButton(ButtonEntity):
         if not data.get("success"):
             _LOGGER.error(f"Datakom: Control command {self._action} failed, response: {data}")
             raise HomeAssistantError(f"Datakom: команда {self._action} не виконана: {data.get('error')}")
-        _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")
+        if data.get("queued"):
+            _LOGGER.info(f"Datakom: Control command {self._action} queued until the controller reconnects")
+        else:
+            _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")
+        # Контроллер присылает новый режим через несколько секунд после подтверждения
+        for delay in (3, 10):
+            async_call_later(self.hass, delay, lambda _now: self.hass.async_create_task(self._coordinator.async_request_refresh()))

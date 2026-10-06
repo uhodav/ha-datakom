@@ -25,9 +25,10 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 
 - **Multi-language support**: English, Ukrainian, Russian translations
 - **ENUM sensors**: Genset Mode, Genset State, Engine State, Breaker State, Mains State, Battery State, Start Source, Running Type
-- **Calculated sensors**: Average fuel rate, fuel time remaining, specific fuel consumption, battery health
+- **Single polling cycle**: one API request per update interval for all entities; entities become unavailable when the controller stops sending data
+- **Statistics and Energy dashboard**: standard units and state classes (kWh counters can be added to the Energy dashboard)
 - **Binary sensors**: API connection status, LED indicators, alarm monitoring
-- **Control buttons**: Restart functionality
+- **Control buttons**: Stop/Auto/Manual/Test (with a control key), Refresh
 - **Automatic parameter detection**: Auto-assigns device classes and units of measurement
 
 ## Installation
@@ -55,7 +56,7 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 
 ### Step 1: API Settings
 - **API URL**: Base URL of your Datakom REST API (e.g., `https://example.com/datakom/api`)
-- **Update Interval**: How often to fetch data (1-60 minutes)
+- **Update Interval**: How often to fetch data (1-60 minutes); one request updates all entities. The controller sends telemetry about once a minute
 - **Language**: Select interface language (Українська/English/Русский) - auto-detected from Home Assistant language
 - **Control key** (optional): the `X-API-Key` of the Datakom API server, required for the control buttons (Stop/Auto/Manual/Test). This is the API server's own key from its `data/control_key` file — not a Datakom/Rainbow/SCADA password; how to generate it: [datakom_listener → Remote Control](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Leave empty for monitoring only — control buttons are then not created. Can be changed later in the integration options.
 
@@ -90,15 +91,13 @@ Parameters from the API are automatically converted to sensors:
 - **`sensor.start_source`** - Start trigger source
 - **`sensor.running_type`** - Operational mode type
 
-### Calculated Sensors
-- **`sensor.avg_fuel_rate`** - Average fuel consumption (L/h)
-  - Formula: `Total Fuel Consumption / Run Hours`
-- **`sensor.fuel_time_remaining`** - Estimated runtime remaining (hours)
-  - Formula: `Fuel Status / Fuel Rate`
-- **`sensor.specific_fuel_consumption`** - Fuel efficiency (L/kWh)
-  - Formula: `Total Fuel Consumption / Total kWh`
-- **`sensor.battery_health`** - Battery condition (%)
-  - Based on minimum battery voltage (12.6V = 100%, 10.5V = 0%)
+### Diagnostic Sensors
+- **Data age** - seconds since the controller sent the last telemetry. When the data is older than the API threshold (5 minutes by default), parameter sensors, LEDs and alarms become **unavailable** instead of showing old values, and `API Connection` turns off.
+
+### Statistics and Energy Dashboard
+- Units are converted to Home Assistant standards (`°C`, `h`, `d`, `L`, `bar`, `rpm`)
+- Voltage, current, frequency, power, temperature, pressure, fuel level have `measurement` state class (long-term statistics and graphs)
+- `Genset Total kWh` (and other kWh/kVArh counters, run hours, starts, cranks) have `total_increasing` state class — add `Genset Total kWh` to **Settings → Dashboards → Energy** as a generation source
 
 ### Binary Sensors
 - **`binary_sensor.api_connection`** - API connection status
@@ -114,7 +113,7 @@ Parameters from the API are automatically converted to sensors:
 **Note**: LED indicators are now calculated from generator state and mode parameters, not from direct API endpoints.
 
 ### Buttons
-- **`button.restart`** - Restart device controller
+- **`button.datakom_device_refresh`** - Refresh data now (without waiting for the update interval)
 - **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`** - Controller pushbuttons (created only when a control key is set). The press waits for the controller confirmation; on failure Home Assistant shows an error.
 
 ## Custom Lovelace Card
@@ -203,12 +202,12 @@ entities:
     name: Engine RPM
   - entity: sensor.genset_tot_active_pwr
     name: Active Power
-  - entity: sensor.avg_fuel_rate
-    name: Avg Fuel Rate
-  - entity: sensor.fuel_time_remaining
-    name: Fuel Time Left
-  - entity: sensor.battery_health
-    name: Battery Health
+  - entity: sensor.engine_fuel_level
+    name: Fuel Level
+  - entity: sensor.engine_hours_to_go
+    name: Hours To Go
+  - entity: sensor.engine_battery_voltage1
+    name: Battery Voltage
 ```
 
 ## Project Structure
@@ -221,6 +220,7 @@ HA_datakom/
 │       ├── sensor.py             # Sensor platform
 │       ├── binary_sensor.py      # Binary sensor platform
 │       ├── button.py             # Button platform
+│       ├── coordinator.py        # Shared API polling
 │       ├── config_flow.py        # UI configuration
 │       ├── manifest.json         # Integration metadata
 │       ├── services.yaml         # Service definitions
@@ -240,6 +240,54 @@ HA_datakom/
 └── README.md
 ```
 
+## Automation Examples
+
+Entity IDs depend on your device name and language — check them in **Settings → Devices & Services → Entities**.
+
+```yaml
+automation:
+  - alias: "Datakom: generator started"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.datakom_device_genset
+        to: "on"
+    action:
+      - service: notify.notify
+        data:
+          message: "Generator started"
+
+  - alias: "Datakom: low fuel"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.engine_fuel_level
+        below: 20
+    action:
+      - service: notify.notify
+        data:
+          message: "Generator fuel below 20%"
+
+  - alias: "Datakom: alarm"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.datakom_device_alarm
+        to: "on"
+    action:
+      - service: notify.notify
+        data:
+          message: "Generator alarm"
+
+  - alias: "Datakom: no data from controller"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.datakom_device_api_connection
+        to: "off"
+        for: "00:10:00"
+    action:
+      - service: notify.notify
+        data:
+          message: "No data from the generator controller for 10 minutes"
+```
+
 ## Troubleshooting
 
 ### Check Logs
@@ -247,6 +295,7 @@ Go to **Settings → System → Logs** and search for `ha_datakom` entries.
 
 ### Common Issues
 - **Sensors not updating**: Check API URL and network connectivity
+- **Sensors unavailable**: The controller is not sending data — check `Data age` and the `API Connection` attributes
 - **Missing translations**: Ensure language is set in Home Assistant profile
 - **ENUM sensors showing numbers**: Verify translation files are loaded correctly
 
@@ -260,7 +309,7 @@ For installation and configuration, see: [https://github.com/uhodav/datakom_list
 - `/dump_devm_param_names?language={lang}` - Get parameter list with translations
   - Language options: `uk` (Ukrainian), `en` (English), `ru` (Russian)
 - `/dump_devm?id={param_id}` - Get specific parameter value
-- `/dump_devm` - Get all parameters (used for calculated sensors and LED states)
+- `/dump_devm?language={lang}` - Get all parameters (one request per update interval for all entities)
 - `/dump_devm_alarm` - Get active alarm signals
 - `POST /device/control` - Controller pushbuttons, sent with header `X-API-Key` (only when a control key is set)
 
@@ -304,11 +353,11 @@ For installation and configuration, see: [https://github.com/uhodav/datakom_list
 ```
 
 ### Key Parameter IDs
-- `103` - Genset Mode (0=Stop, 1=Auto, 2=Manual, 4=Auto-Start, etc.)
+- `103` - Genset Mode (1=Stop, 2=Manual, 4=Auto, 8=Test)
 - `105` - Genset State (0=At Rest, 1-25=Various running states)
 - `237` - Engine RPM
 - `239` - Engine Battery Voltage 1
-- `587` - Engine Fuel Percent
+- `587` - Engine Hours to Go (computed by the API from fuel and load)
 
 ## License
 This integration is provided as-is for monitoring Datakom generator controllers.
@@ -330,9 +379,10 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 - **Багатомовна підтримка**: переклади українською, англійською, російською
 - **ENUM сенсори**: Режим генератора, Стан генератора, Стан двигуна, Стан вимикача, Стан мережі, Стан батареї, Джерело запуску, Тип роботи
-- **Розрахункові сенсори**: Середня витрата палива, залишок часу роботи, питома витрата палива, стан батареї
+- **Єдиний цикл опитування**: один запит до API за інтервал для всіх сутностей; сутності стають недоступними, коли контролер перестає надсилати дані
+- **Статистика та панель Енергія**: стандартні одиниці та класи станів (лічильники кВт·год можна додати до панелі Енергія)
 - **Бінарні сенсори**: Стан API підключення, індикатори LED, моніторинг аварій
-- **Кнопки керування**: Функція перезапуску
+- **Кнопки керування**: Стоп/Авто/Ручний/Тест (з ключем керування), Оновити
 - **Автоматичне визначення параметрів**: Автоматичне призначення класів пристроїв та одиниць вимірювання
 
 ## Встановлення
@@ -360,7 +410,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Крок 1: Налаштування API
 - **URL API**: Базова URL вашого Datakom REST API (наприклад, `https://example.com/datakom/api`)
-- **Інтервал оновлення**: Як часто оновлювати дані (1-60 хвилин)
+- **Інтервал оновлення**: Як часто оновлювати дані (1-60 хвилин); один запит оновлює всі сутності. Контролер надсилає телеметрію приблизно раз на хвилину
 - **Мова**: Виберіть мову інтерфейсу (Українська/English/Русский) - автоматично визначається з мови Home Assistant
 - **Ключ керування** (необов'язково): `X-API-Key` сервера Datakom API, потрібен для кнопок керування (Стоп/Авто/Ручний/Тест). Це власний ключ API-сервера з його файлу `data/control_key` — не пароль Datakom/Rainbow/SCADA; як згенерувати: [datakom_listener → Дистанційне керування](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Залиште порожнім лише для моніторингу — тоді кнопки керування не створюються. Можна змінити пізніше в параметрах інтеграції.
 
@@ -395,15 +445,13 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **`sensor.start_source`** - Джерело запуску
 - **`sensor.running_type`** - Тип операційного режиму
 
-### Розрахункові сенсори
-- **`sensor.avg_fuel_rate`** - Середня витрата палива (л/год)
-  - Формула: `Загальна витрата палива / Мотогодини`
-- **`sensor.fuel_time_remaining`** - Залишок часу роботи (години)
-  - Формула: `Залишок палива / Поточна витрата`
-- **`sensor.specific_fuel_consumption`** - Питома витрата палива (л/кВт·год)
-  - Формула: `Загальна витрата палива / Загальна виробка кВт·год`
-- **`sensor.battery_health`** - Стан батареї (%)
-  - На основі мінімальної напруги батареї (12.6V = 100%, 10.5V = 0%)
+### Діагностичні сенсори
+- **Вік даних** - скільки секунд тому контролер надіслав останню телеметрію. Коли дані старші за поріг API (за замовчуванням 5 хвилин), сенсори параметрів, LED та аварії стають **недоступними** замість показу старих значень, а `API Connection` вимикається.
+
+### Статистика та панель Енергія
+- Одиниці приведені до стандартів Home Assistant (`°C`, `h`, `d`, `L`, `bar`, `rpm`)
+- Напруга, струм, частота, потужність, температура, тиск, рівень палива мають клас стану `measurement` (довгострокова статистика та графіки)
+- `Загальна енергія кВт·год` (та інші лічильники кВт·год/кВАр·год, мотогодини, пуски, прокрутки) мають клас стану `total_increasing` — додайте `Загальна енергія кВт·год` у **Налаштування → Панелі → Енергія** як джерело генерації
 
 ### Бінарні сенсори
 - **`binary_sensor.api_connection`** - Стан підключення до API
@@ -419,7 +467,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 **Примітка**: Індикатори LED тепер розраховуються на основі стану та режиму генератора, а не з прямих API endpoints.
 
 ### Кнопки
-- **`button.restart`** - Перезапуск контролера пристрою
+- **`button.datakom_device_refresh`** - Оновити дані зараз (не чекаючи інтервалу оновлення)
 - **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`** - Кнопки контролера (створюються лише коли задано ключ керування). Натискання чекає підтвердження від контролера; у разі помилки Home Assistant показує повідомлення.
 
 ## Приклад панелі
@@ -436,12 +484,12 @@ entities:
     name: Оберти двигуна
   - entity: sensor.genset_tot_active_pwr
     name: Активна потужність
-  - entity: sensor.avg_fuel_rate
-    name: Середня витрата палива
-  - entity: sensor.fuel_time_remaining
-    name: Залишок часу роботи
-  - entity: sensor.battery_health
-    name: Стан батареї
+  - entity: sensor.engine_fuel_level
+    name: Рівень палива
+  - entity: sensor.engine_hours_to_go
+    name: Годин до роботи
+  - entity: sensor.engine_battery_voltage1
+    name: Напруга акумулятора
 ```
 
 ## Структура проекту
@@ -454,6 +502,7 @@ HA_datakom/
 │       ├── sensor.py             # Платформа сенсорів
 │       ├── binary_sensor.py      # Платформа бінарних сенсорів
 │       ├── button.py             # Платформа кнопок
+│       ├── coordinator.py        # Спільне опитування API
 │       ├── config_flow.py        # UI налаштування
 │       ├── manifest.json         # Метадані інтеграції
 │       ├── services.yaml         # Визначення служб
@@ -473,6 +522,54 @@ HA_datakom/
 └── README.md
 ```
 
+## Приклади автоматизацій
+
+ID сутностей залежать від назви пристрою та мови — перевірте їх у **Налаштування → Пристрої та служби → Сутності**.
+
+```yaml
+automation:
+  - alias: "Datakom: генератор запущено"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.datakom_device_genset
+        to: "on"
+    action:
+      - service: notify.notify
+        data:
+          message: "Генератор запущено"
+
+  - alias: "Datakom: мало палива"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.engine_fuel_level
+        below: 20
+    action:
+      - service: notify.notify
+        data:
+          message: "Паливо генератора нижче 20%"
+
+  - alias: "Datakom: аварія"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.datakom_device_alarm
+        to: "on"
+    action:
+      - service: notify.notify
+        data:
+          message: "Аварія генератора"
+
+  - alias: "Datakom: немає даних від контролера"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.datakom_device_api_connection
+        to: "off"
+        for: "00:10:00"
+    action:
+      - service: notify.notify
+        data:
+          message: "Контролер генератора не надсилає дані 10 хвилин"
+```
+
 ## Усунення несправностей
 
 ### Перевірка логів
@@ -480,6 +577,7 @@ HA_datakom/
 
 ### Поширені проблеми
 - **Сенсори не оновлюються**: Перевірте URL API та підключення до мережі
+- **Сенсори недоступні**: Контролер не надсилає дані — перевірте `Вік даних` та атрибути `API Connection`
 - **Відсутні переклади**: Переконайтеся, що мова встановлена в профілі Home Assistant
 - **ENUM сенсори показують числа**: Перевірте, чи правильно завантажені файли перекладів
 
@@ -493,16 +591,16 @@ HA_datakom/
 - `/dump_devm_param_names?language={lang}` - Отримання списку параметрів з перекладами
   - Опції мови: `uk` (українська), `en` (англійська), `ru` (російська)
 - `/dump_devm?id={param_id}` - Отримання значення конкретного параметра
-- `/dump_devm` - Отримання всіх параметрів (використовується для розрахункових сенсорів та станів LED)
+- `/dump_devm?language={lang}` - Отримання всіх параметрів (один запит за інтервал для всіх сутностей)
 - `/dump_devm_alarm` - Отримання активних аварійних сигналів
 - `POST /device/control` - Кнопки контролера, надсилається із заголовком `X-API-Key` (лише коли задано ключ керування)
 
 ### Ключові ID параметрів
-- `103` - Режим генератора (0=Стоп, 1=Авто, 2=Ручний, 4=Авто-запуск тощо)
+- `103` - Режим генератора (1=Стоп, 2=Ручний, 4=Авто, 8=Тест)
 - `105` - Стан генератора (0=У спокої, 1-25=Різні робочі стани)
 - `237` - Оберти двигуна
 - `239` - Напруга акумулятора двигуна 1
-- `587` - Рівень палива у відсотках
+- `587` - Годин до роботи (розраховує API за паливом та навантаженням)
 
 ## Ліцензія
 Ця інтеграція надається як є для моніторингу контролерів генераторів Datakom.

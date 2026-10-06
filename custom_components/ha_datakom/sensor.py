@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.util import dt as dt_util
 
@@ -161,6 +162,31 @@ UNIT_ICONS = {
     "VER": "mdi:information-variant",
 }
 
+# Единицы API -> (единица HA, device_class, state_class)
+UNIT_MAP = {
+    "'C": ("°C", SensorDeviceClass.TEMPERATURE, SensorStateClass.MEASUREMENT),
+    "V": ("V", SensorDeviceClass.VOLTAGE, SensorStateClass.MEASUREMENT),
+    "Vdc": ("V", SensorDeviceClass.VOLTAGE, SensorStateClass.MEASUREMENT),
+    "A": ("A", SensorDeviceClass.CURRENT, SensorStateClass.MEASUREMENT),
+    "Hz": ("Hz", SensorDeviceClass.FREQUENCY, SensorStateClass.MEASUREMENT),
+    "kW": ("kW", SensorDeviceClass.POWER, SensorStateClass.MEASUREMENT),
+    "kVA": ("kVA", None, SensorStateClass.MEASUREMENT),
+    "kVAr": ("kvar", None, SensorStateClass.MEASUREMENT),
+    "kWh": ("kWh", SensorDeviceClass.ENERGY, SensorStateClass.TOTAL_INCREASING),
+    "kVArh": ("kvarh", None, SensorStateClass.TOTAL_INCREASING),
+    "Bar": ("bar", SensorDeviceClass.PRESSURE, SensorStateClass.MEASUREMENT),
+    "%": ("%", None, SensorStateClass.MEASUREMENT),
+    "RPM": ("rpm", None, SensorStateClass.MEASUREMENT),
+    "hour": ("h", SensorDeviceClass.DURATION, SensorStateClass.MEASUREMENT),
+    "day": ("d", SensorDeviceClass.DURATION, SensorStateClass.MEASUREMENT),
+    "lt.": ("L", SensorDeviceClass.VOLUME_STORAGE, SensorStateClass.MEASUREMENT),
+    "lt./h": ("L/h", None, SensorStateClass.MEASUREMENT),
+    "Ah": ("Ah", None, SensorStateClass.TOTAL_INCREASING),
+}
+
+# Счетчики (запуски, прокрутки, моточасы, расход топлива)
+TOTAL_INCREASING_IDS = {"503", "507", "511", "577", "598", "608"}
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -173,6 +199,7 @@ async def async_setup_entry(
     device_name = entry_data.get("device_name", "Datakom Device")
     param_ids = entry_data.get("param_ids", [])
     update_interval = entry_data.get("update_interval", 5)
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     
     _LOGGER.debug(f"Datakom: Setting up sensors with entry_data: {entry_data}")
     
@@ -206,23 +233,24 @@ async def async_setup_entry(
     _LOGGER.debug(f"Datakom: Creating sensors for param_ids: {param_ids}")
     for pid in param_ids:
         label = param_labels.get(str(pid), str(pid))
-        sensor = DatakomParamSensor(api_url, pid, label, device_name, update_interval)
+        sensor = DatakomParamSensor(coordinator, pid, label, device_name)
         sensors.append(sensor)
         _LOGGER.debug(f"Datakom: Created sensor {sensor.unique_id} for param {pid}")
+    sensors.append(DatakomDataAgeSensor(coordinator, device_name))
     
     if sensors:
         _LOGGER.info(f"Datakom: Adding {len(sensors)} sensors")
-        async_add_entities(sensors, True)
+        async_add_entities(sensors)
     else:
         _LOGGER.warning("Datakom: No sensors were created")
 
 
 
-class DatakomParamSensor(SensorEntity):
+class DatakomParamSensor(CoordinatorEntity, SensorEntity):
     """Сенсор для одного выбранного параметра Datakom."""
 
-    def __init__(self, api_url, param_id, label, device_name, update_interval):
-        self._api_url = api_url
+    def __init__(self, coordinator, param_id, label, device_name):
+        super().__init__(coordinator)
         self._param_id = param_id
         self._label = label
         self._original_label = label  # Сохраняем оригинальный английский label для description
@@ -239,8 +267,6 @@ class DatakomParamSensor(SensorEntity):
         self._unit = None
         self._label_hint = None
         self._value_hint = None
-        self._update_interval = update_interval
-        self._attr_should_poll = True
         self._hass = None
         
         # Автоопределение типа ENUM сенсора: сначала по ID параметра (название может быть
@@ -286,11 +312,6 @@ class DatakomParamSensor(SensorEntity):
             self._attr_device_class = SensorDeviceClass.ENUM
             self._attr_options = options
 
-    @property
-    def scan_interval(self) -> timedelta:
-        """Return the scan interval in minutes."""
-        return timedelta(minutes=self._update_interval)
-    
     def _convert_utc_to_local(self, time_str: str) -> str:
         """Преобразует время из UTC в локальный часовой пояс Home Assistant."""
         try:
@@ -342,15 +363,38 @@ class DatakomParamSensor(SensorEntity):
         return self._attr_unique_id
 
     @property
-    def state(self):
+    def available(self) -> bool:
+        # Устаревшие данные (контроллер не на связи) показываем как недоступные
+        data = self.coordinator.data or {}
+        return super().available and not data.get("stale", False)
+
+    @property
+    def native_value(self):
+        # Числовой сенсор не может иметь текстовое значение ("N/A")
+        if self.state_class and not isinstance(self._state, (int, float)):
+            return None
         return self._state
+
+    @property
+    def device_class(self):
+        if self._enum_type:
+            return SensorDeviceClass.ENUM
+        return UNIT_MAP.get(self._unit, (None, None, None))[1]
+
+    @property
+    def state_class(self):
+        if self._enum_type:
+            return None
+        if str(self._param_id) in TOTAL_INCREASING_IDS:
+            return SensorStateClass.TOTAL_INCREASING
+        return UNIT_MAP.get(self._unit, (None, None, None))[2]
 
     @property
     def icon(self) -> str:
         return self._get_icon()
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         # Не показываем unit для временных сенсоров (часовой пояс уже в значении)
         if self._unit == "UTC+00:00":
             return None
@@ -360,7 +404,7 @@ class DatakomParamSensor(SensorEntity):
         # Дополнительная проверка для mode/state сенсоров по unit типу
         if self._unit and self._unit.startswith("~"):
             return None
-        return self._unit
+        return UNIT_MAP.get(self._unit, (self._unit or None,))[0]
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -380,74 +424,78 @@ class DatakomParamSensor(SensorEntity):
             
         return attrs
 
-    async def async_update(self) -> None:
-        # Запрос к /dump_devm?id=...
-        url = f"{self._api_url}/dump_devm?id={self._param_id}"
-        _LOGGER.debug(f"Datakom: requesting param value from {url}")
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(url, timeout=15) as resp:
-                    # Проверяем HTTP статус
-                    if resp.status != 200:
-                        text = await resp.text()
-                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned status {resp.status}: {text[:200]}")
-                        return  # Оставляем последнее состояние
-                    
-                    # Проверяем content-type
-                    content_type = resp.content_type
-                    if content_type and 'json' not in content_type:
-                        text = await resp.text()
-                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned non-JSON content-type '{content_type}': {text[:200]}")
-                        return  # Оставляем последнее состояние
-                    
-                    # Пытаемся распарсить JSON
-                    try:
-                        data = await resp.json()
-                        _LOGGER.debug(f"Datakom: param value response: {data}")
-                    except ValueError as json_err:
-                        text = await resp.text()
-                        _LOGGER.warning(f"Datakom: dump_devm endpoint returned invalid JSON: {text[:200]}")
-                        return  # Оставляем последнее состояние
-                    
-                    if data.get("success") and "result" in data:
-                        for p in data["result"]:
-                            if str(p["id"]) == str(self._param_id):
-                                value = p.get("value")
-                                self._unit = p.get("unit", "")
+    def _update_from_coordinator(self) -> None:
+        data = self.coordinator.data or {}
+        result = list(data.get("params", {}).values())
+        for p in result:
+            if str(p["id"]) == str(self._param_id):
+                value = p.get("value")
+                self._unit = p.get("unit", "")
                                 
-                                # Сохраняем оригинальный английский label если доступен
-                                if "label" in p and p["label"]:
-                                    self._original_label = p["label"]
+                # Сохраняем оригинальный английский label если доступен
+                if "label" in p and p["label"]:
+                    self._original_label = p["label"]
                                 
-                                # Обновляем label из title если доступен (с переводом)
-                                if "title" in p and p["title"]:
-                                    self._label = p["title"]
-                                    self._attr_name = p["title"]
+                # Обновляем label из title если доступен (с переводом)
+                if "title" in p and p["title"]:
+                    self._label = p["title"]
+                    self._attr_name = p["title"]
                                 
-                                # Сохраняем labelHint и valueHint
-                                self._label_hint = p.get("labelHint")
-                                self._value_hint = p.get("valueHint")
+                # Сохраняем labelHint и valueHint
+                self._label_hint = p.get("labelHint")
+                self._value_hint = p.get("valueHint")
                                 
-                                # Если это время с UTC+00:00, преобразуем в локальный часовой пояс
-                                if self._unit == "UTC+00:00" and value:
-                                    self._state = self._convert_utc_to_local(value)
-                                # Если это ENUM сенсор, конвертируем число в текстовый ключ
-                                elif self._enum_map and value is not None:
-                                    self._state = self._enum_map.get(str(value), self._enum_map.get(value, str(value)))
-                                else:
-                                    self._state = value
-                                break
-                    else:
-                        # Проверяем, является ли это временной ошибкой
-                        error_msg = data.get("error", "")
-                        if "No dump_devm data available" in error_msg:
-                            _LOGGER.debug(f"Datakom: param value temporarily unavailable for {self._attr_unique_id}: {error_msg}")
-                        else:
-                            _LOGGER.warning(f"Datakom: param value failed for {self._attr_unique_id}, response: {data}")
-            except Exception as e:
-                _LOGGER.error(f"Datakom: sensor {self._attr_unique_id} update request error: {e}")
-    
+                # Если это время с UTC+00:00, преобразуем в локальный часовой пояс
+                if self._unit == "UTC+00:00" and value:
+                    self._state = self._convert_utc_to_local(value)
+                # Если это ENUM сенсор, конвертируем число в текстовый ключ
+                elif self._enum_map and value is not None:
+                    self._state = self._enum_map.get(str(value), self._enum_map.get(value, str(value)))
+                else:
+                    self._state = value
+                break
+
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_coordinator()
+        super()._handle_coordinator_update()
+
     async def async_added_to_hass(self) -> None:
         """Вызывается когда сенсор добавлен в Home Assistant."""
         await super().async_added_to_hass()
         self._hass = self.hass
+        self._update_from_coordinator()
+
+
+class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
+    """Сколько секунд назад контроллер прислал последнюю телеметрию."""
+
+    def __init__(self, coordinator, device_name):
+        super().__init__(coordinator)
+        self._device_name = device_name
+        self._attr_has_entity_name = True
+        self._attr_name = "Data age"
+        self._attr_unique_id = "datakom_data_age"
+        self._attr_translation_key = "data_age"
+        self._attr_device_class = SensorDeviceClass.DURATION
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = "s"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_icon = "mdi:timer-sand"
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, "datakom_device")},
+            "name": self._device_name,
+            "manufacturer": "Datakom",
+            "model": "Device",
+        }
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get("data_age_seconds")
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        data = self.coordinator.data or {}
+        return {"stale": data.get("stale"), "telemetry_timestamp": data.get("timestamp")}
