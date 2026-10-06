@@ -305,8 +305,9 @@ class DatakomLedBinarySensor(BinarySensorEntity):
                             # Режим (Modbus 10605): 1=STOP, 2=MANUAL, 4=AUTO, 8=TEST
                             self._state = 1 if genset_mode == GENSET_MODE_LEDS[self._led_name] else 0
                         elif self._led_name == "run":
-                            # Run горит когда генератор работает (state != 0)
-                            self._state = 1 if genset_state != 0 else 0
+                            # Run - кнопка пуску в ручному режимі: горить лише коли режим MANUAL (2)
+                            # і двигун працює. В AUTO роботу генератора показує LED genset.
+                            self._state = 1 if genset_mode == GENSET_MODE_LEDS["manual"] and genset_state != 0 else 0
                         elif self._led_name == "alarm":
                             # Alarm горит если есть активные алармы
                             # Проверяем через отдельный запрос к alarm endpoint
