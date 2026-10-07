@@ -144,5 +144,8 @@ class DatakomControlButton(ButtonEntity):
         else:
             _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")
         # Контроллер присылает новый режим через несколько секунд после подтверждения
+        async def _refresh(_now):
+            await self._coordinator.async_request_refresh()
+
         for delay in (3, 10):
-            async_call_later(self.hass, delay, lambda _now: self.hass.async_create_task(self._coordinator.async_request_refresh()))
+            async_call_later(self.hass, delay, _refresh)
