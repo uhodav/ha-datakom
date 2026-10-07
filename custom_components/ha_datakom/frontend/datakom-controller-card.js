@@ -311,7 +311,11 @@ class DatakomControllerCard extends HTMLElement {
 
         .mimic-switch.closed .mimic-blade {
           transform: rotate(0deg);
-          background: #27ae60;
+          background: #666;
+        }
+
+        .mimic-switch.mcb {
+          transform: rotateX(180deg);
         }
         
         .control-buttons {
@@ -505,7 +509,7 @@ class DatakomControllerCard extends HTMLElement {
         <ha-icon icon="mdi:transmission-tower"></ha-icon>
         <span class="mimic-label">MAINS</span>
         <div class="side-led green" data-entity="${m.mcb}"></div>
-        <div class="mimic-switch" data-entity="${m.mcb}"><div class="mimic-blade"></div></div>
+        <div class="mimic-switch mcb" data-entity="${m.mcb}"><div class="mimic-blade"></div></div>
         <span></span>
         <span></span>
         <div class="mimic-line"></div>
@@ -1130,7 +1134,7 @@ if (!window.customCards.some(card => card.type === 'datakom-mimic-card')) window
 });
 
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.5.0 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.5.1 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );
