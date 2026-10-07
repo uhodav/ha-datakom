@@ -3,6 +3,7 @@ from homeassistant import config_entries
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
 from . import DOMAIN, _cleanup_old_entities
+from .coordinator import DEFAULT_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL
 import aiohttp
 import logging
 
@@ -25,15 +26,15 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             api_url = user_input.get("api_url", "").strip().rstrip("/")
-            update_interval = user_input.get("update_interval", 5)
+            scan_interval = user_input.get("scan_interval", DEFAULT_SCAN_INTERVAL)
             language = user_input.get("language", "uk")
             if not api_url:
                 errors["api_url"] = "required"
-            elif not (1 <= update_interval <= 60):
-                errors["update_interval"] = "invalid"
+            elif not (MIN_SCAN_INTERVAL <= scan_interval <= MAX_SCAN_INTERVAL):
+                errors["scan_interval"] = "invalid"
             else:
                 self.api_url = api_url
-                self.update_interval = update_interval
+                self.scan_interval = scan_interval
                 self.language = language
                 self.control_key = user_input.get("control_key", "").strip()
                 # Проверяем доступность API
@@ -66,12 +67,12 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required("api_url"): str,
-                vol.Required("update_interval", default=5): selector.NumberSelector(
+                vol.Required("scan_interval", default=DEFAULT_SCAN_INTERVAL): selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=1,
-                        max=60,
-                        mode=selector.NumberSelectorMode.SLIDER,
-                        unit_of_measurement="min",
+                        min=MIN_SCAN_INTERVAL,
+                        max=MAX_SCAN_INTERVAL,
+                        mode=selector.NumberSelectorMode.BOX,
+                        unit_of_measurement="s",
                     )
                 ),
                 vol.Required("language", default=default_language): selector.SelectSelector(
@@ -135,7 +136,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # Сохраняем все настройки
                 entry_data = {
                     "api_url": self.api_url,
-                    "update_interval": self.update_interval,
+                    "scan_interval": self.scan_interval,
                     "language": language,
                     "param_ids": selected_params,
                     "device_name": "Datakom Device",
@@ -182,15 +183,15 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         try:
             if user_input is not None:
                 api_url = user_input.get("api_url", "").strip().rstrip("/")
-                update_interval = user_input.get("update_interval", 5)
+                scan_interval = user_input.get("scan_interval", DEFAULT_SCAN_INTERVAL)
                 language = user_input.get("language", "uk")
                 if not api_url:
                     errors["api_url"] = "required"
-                elif not (1 <= update_interval <= 60):
-                    errors["update_interval"] = "invalid"
+                elif not (MIN_SCAN_INTERVAL <= scan_interval <= MAX_SCAN_INTERVAL):
+                    errors["scan_interval"] = "invalid"
                 else:
                     self.api_url = api_url
-                    self.update_interval = update_interval
+                    self.scan_interval = scan_interval
                     self.language = language
                     self.control_key = user_input.get("control_key", "").strip()
                     return await self.async_step_params()
@@ -203,12 +204,12 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
             step_id="api",
             data_schema=vol.Schema({
                 vol.Required("api_url", default=current_data.get("api_url", "")): str,
-                vol.Required("update_interval", default=current_data.get("update_interval", 5)): selector.NumberSelector(
+                vol.Required("scan_interval", default=current_data.get("scan_interval", DEFAULT_SCAN_INTERVAL)): selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=1,
-                        max=60,
-                        mode=selector.NumberSelectorMode.SLIDER,
-                        unit_of_measurement="min",
+                        min=MIN_SCAN_INTERVAL,
+                        max=MAX_SCAN_INTERVAL,
+                        mode=selector.NumberSelectorMode.BOX,
+                        unit_of_measurement="s",
                     )
                 ),
                 vol.Required("language", default=current_data.get("language", "uk")): selector.SelectSelector(
@@ -277,7 +278,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     # cleaned_params содержит только те, что реально доступны
                     new_data = {
                         "api_url": self.api_url,
-                        "update_interval": self.update_interval,
+                        "scan_interval": self.scan_interval,
                         "language": self.language,
                         "param_ids": cleaned_params,
                         "device_name": current_data.get("device_name", "Datakom Device"),

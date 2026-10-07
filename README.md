@@ -56,7 +56,7 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 
 ### Step 1: API Settings
 - **API URL**: Base URL of your Datakom REST API (e.g., `https://example.com/datakom/api`)
-- **Update Interval**: How often to fetch data (1-60 minutes); one request updates all entities. The controller sends telemetry about once a minute
+- **Update Interval**: How often to fetch data, in seconds (5-600, default 15); one request updates all entities. Mode changes from the panel or the portal appear in Home Assistant within this interval
 - **Language**: Select interface language (Українська/English/Русский) - auto-detected from Home Assistant language
 - **Control key** (optional): the `X-API-Key` of the Datakom API server, required for the control buttons (Stop/Auto/Manual/Test). This is the API server's own key from its `data/control_key` file — not a Datakom/Rainbow/SCADA password; how to generate it: [datakom_listener → Remote Control](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Leave empty for monitoring only — control buttons are then not created. Can be changed later in the integration options.
 
@@ -412,7 +412,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Крок 1: Налаштування API
 - **URL API**: Базова URL вашого Datakom REST API (наприклад, `https://example.com/datakom/api`)
-- **Інтервал оновлення**: Як часто оновлювати дані (1-60 хвилин); один запит оновлює всі сутності. Контролер надсилає телеметрію приблизно раз на хвилину
+- **Інтервал оновлення**: Як часто оновлювати дані, у секундах (5-600, за замовчуванням 15); один запит оновлює всі сутності. Зміна режиму з панелі або порталу з'являється в Home Assistant у межах цього інтервалу
 - **Мова**: Виберіть мову інтерфейсу (Українська/English/Русский) - автоматично визначається з мови Home Assistant
 - **Ключ керування** (необов'язково): `X-API-Key` сервера Datakom API, потрібен для кнопок керування (Стоп/Авто/Ручний/Тест). Це власний ключ API-сервера з його файлу `data/control_key` — не пароль Datakom/Rainbow/SCADA; як згенерувати: [datakom_listener → Дистанційне керування](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Залиште порожнім лише для моніторингу — тоді кнопки керування не створюються. Можна змінити пізніше в параметрах інтеграції.
 

@@ -3,7 +3,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from .coordinator import DatakomCoordinator
+from .coordinator import DEFAULT_SCAN_INTERVAL, DatakomCoordinator
 
 DOMAIN = "ha_datakom"
 _LOGGER = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass,
         api_url=entry.data.get("api_url", ""),
         language=entry.data.get("language", "uk"),
-        update_interval_min=int(entry.data.get("update_interval", 5)),
+        scan_interval=int(entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL)),
     )
     await coordinator.async_config_entry_first_refresh()
     

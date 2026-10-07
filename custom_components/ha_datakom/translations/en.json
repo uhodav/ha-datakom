@@ -7,12 +7,12 @@
         "description": "Enter the API URL and update interval.",
         "data": {
           "api_url": "API URL",
-          "update_interval": "Update interval (minutes)",
+          "scan_interval": "Update interval (seconds)",
           "control_key": "Control key (optional)"
         },
         "data_description": {
           "api_url": "Base API URL, e.g. https://example.com/datakom/api",
-          "update_interval": "How often to fetch data (1-60 minutes)",
+          "scan_interval": "How often to fetch data from the API (5-600 seconds). One request updates all entities",
           "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created."
         }
       },
@@ -344,12 +344,12 @@
         "title": "Step 1: API setup",
         "data": {
           "api_url": "API URL",
-          "update_interval": "Update interval (minutes)",
+          "scan_interval": "Update interval (seconds)",
           "control_key": "Control key (optional)"
         },
         "data_description": {
           "api_url": "Base API URL, e.g. https://example.com/datakom/api",
-          "update_interval": "How often to fetch data (1-60 minutes)",
+          "scan_interval": "How often to fetch data from the API (5-600 seconds). One request updates all entities",
           "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created."
         }
       },

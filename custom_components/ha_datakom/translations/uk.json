@@ -7,12 +7,12 @@
         "description": "Введіть URL API та інтервал оновлення.",
         "data": {
           "api_url": "URL API",
-          "update_interval": "Інтервал оновлення (хвилини)",
+          "scan_interval": "Інтервал оновлення (секунди)",
           "control_key": "Ключ керування (необов'язково)"
         },
         "data_description": {
           "api_url": "Базовий URL API, наприклад https://example.com/datakom/api",
-          "update_interval": "Як часто оновлювати дані (1-60 хвилин)",
+          "scan_interval": "Як часто отримувати дані з API (5-600 секунд). Один запит оновлює всі сутності",
           "control_key": "X-API-Key для кнопок керування генератором. Без ключа кнопки не створюються."
         }
       },
@@ -344,12 +344,12 @@
         "title": "Крок 1: Налаштування API",
         "data": {
           "api_url": "URL API",
-          "update_interval": "Інтервал оновлення (хвилини)",
+          "scan_interval": "Інтервал оновлення (секунди)",
           "control_key": "Ключ керування (необов'язково)"
         },
         "data_description": {
           "api_url": "Базовий URL API, наприклад https://example.com/datakom/api",
-          "update_interval": "Як часто оновлювати дані (1-60 хвилин)",
+          "scan_interval": "Як часто отримувати дані з API (5-600 секунд). Один запит оновлює всі сутності",
           "control_key": "X-API-Key для кнопок керування генератором. Без ключа кнопки не створюються."
         }
       },

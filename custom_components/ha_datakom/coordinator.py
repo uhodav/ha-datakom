@@ -12,16 +12,21 @@ _LOGGER = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
+# Интервал опроса API в секундах
+DEFAULT_SCAN_INTERVAL = 15
+MIN_SCAN_INTERVAL = 5
+MAX_SCAN_INTERVAL = 600
+
 
 class DatakomCoordinator(DataUpdateCoordinator):
     """Читает /dump_devm, /dump_devm_alarm и /health одним циклом опроса."""
 
-    def __init__(self, hass: HomeAssistant, api_url: str, language: str, update_interval_min: int):
+    def __init__(self, hass: HomeAssistant, api_url: str, language: str, scan_interval: int):
         super().__init__(
             hass,
             _LOGGER,
             name="Datakom",
-            update_interval=timedelta(minutes=update_interval_min),
+            update_interval=timedelta(seconds=scan_interval),
         )
         self.api_url = api_url
         self.language = language
