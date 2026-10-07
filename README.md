@@ -39,18 +39,16 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
    - Make sure you know the API URL (e.g., `http://your-server:8765/api`)
 
 ### Home Assistant Integration
-1. Copy the `custom_components/ha_datakom` folder to your Home Assistant `custom_components` directory
-2. Copy the `www/ha_datakom` folder to your Home Assistant `config/www/` directory
-3. Restart Home Assistant
-4. Add the Lovelace resources:
-   - Go to **Settings → Dashboards → Resources → Add Resource**
-   - Add card: URL: `/local/ha_datakom/datakom-controller-card.js`, Type: **JavaScript Module**
-   - Add editor: URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
-   - Click **Create** for each
-5. Refresh your browser (Ctrl+F5)
-6. Go to **Settings → Devices & Services → Add Integration**
-7. Search for "Datakom listener"
-8. Follow the configuration steps
+1. Install via HACS, or copy the `custom_components/ha_datakom` folder to your Home Assistant `custom_components` directory
+2. Restart Home Assistant
+3. Go to **Settings → Devices & Services → Add Integration**
+4. Search for "Datakom listener"
+5. Follow the configuration steps
+6. Refresh your browser (Ctrl+F5)
+
+The Lovelace cards are shipped with the integration and loaded automatically (served from `/ha_datakom/`), so there is nothing to copy and no Lovelace resource to add; they are updated together with the integration.
+
+**Upgrading from versions before 2.6.0**: remove the old resources `/local/ha_datakom/datakom-controller-card.js` and `/local/ha_datakom/datakom-controller-card-editor.js` in **Settings → Dashboards → Resources** and delete the `config/www/ha_datakom` folder; change image paths in your card config from `/local/community/ha_datakom/img/` to `/ha_datakom/img/`.
 
 ## Configuration
 
@@ -125,11 +123,7 @@ Parameters from the API are automatically converted to sensors:
 The integration includes a custom Datakom Controller Card that mimics the original D500 panel interface.
 
 ### Installation
-1. Copy `www/ha_datakom` folder to `config/www/ha_datakom/`
-2. Add resources: **Settings → Dashboards → Resources**
-   - Card URL: `/local/ha_datakom/datakom-controller-card.js`, Type: **JavaScript Module**
-   - Editor URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
-3. Refresh browser (Ctrl+F5)
+The cards (`datakom-controller-card`, `datakom-mimic-card`) are loaded automatically by the integration, no resources needed. Images are available at `/ha_datakom/img/`.
 
 ### Usage
 ```yaml
@@ -228,16 +222,17 @@ HA_datakom/
 │       ├── config_flow.py        # UI configuration
 │       ├── manifest.json         # Integration metadata
 │       ├── services.yaml         # Service definitions
-│       └── translations/
-│           ├── en.json           # English translations
-│           ├── ru.json           # Russian translations
-│           └── uk.json           # Ukrainian translations
+│       ├── translations/
+│       │   ├── en.json           # English translations
+│       │   ├── ru.json           # Russian translations
+│       │   └── uk.json           # Ukrainian translations
+│       └── frontend/             # Lovelace cards, loaded automatically
+│           ├── datakom-controller-card.js        # Custom Lovelace cards
+│           ├── datakom-controller-card-editor.js # Visual editor
+│           └── img/              # Images
 ├── www/
 │   └── ha_datakom/
-│       ├── datakom-controller-card.js        # Custom Lovelace card
-│       ├── datakom-controller-card-editor.js # Visual editor
-│       ├── README.md             # Card documentation
-│       └── img/                  # Button images
+│       └── README.md             # Card documentation
 ├── dashboard/
 │   └── dashboard_demo.yaml       # Example dashboard
 ├── configuration.yaml
@@ -397,18 +392,16 @@ This integration is provided as-is for monitoring Datakom generator controllers.
    - Переконайтеся, що ви знаєте URL API (наприклад, `http://your-server:8765/api`)
 
 ### Інтеграція Home Assistant
-1. Скопіюйте папку `custom_components/ha_datakom` до директорії `custom_components` вашого Home Assistant
-2. Скопіюйте папку `www/ha_datakom` до `config/www/` вашого Home Assistant
-3. Перезапустіть Home Assistant
-4. Додайте Lovelace ресурси:
-   - Перейдіть до **Налаштування → Панелі → Ресурси → Додати ресурс**
-   - Додайте картку: URL: `/local/ha_datakom/datakom-controller-card.js`, Тип: **JavaScript Module**
-   - Додайте редактор: URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Тип: **JavaScript Module**
-   - Натисніть **Створити** для кожного
-5. Оновіть браузер (Ctrl+F5)
-6. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
-7. Знайдіть "Datakom listener"
-8. Слідуйте крокам налаштування
+1. Встановіть через HACS або скопіюйте папку `custom_components/ha_datakom` до директорії `custom_components` вашого Home Assistant
+2. Перезапустіть Home Assistant
+3. Перейдіть до **Налаштування → Пристрої та служби → Додати інтеграцію**
+4. Знайдіть "Datakom listener"
+5. Слідуйте крокам налаштування
+6. Оновіть браузер (Ctrl+F5)
+
+Картки Lovelace постачаються разом з інтеграцією і підключаються автоматично (з адреси `/ha_datakom/`): нічого копіювати й додавати ресурси не потрібно, вони оновлюються разом з інтеграцією.
+
+**Оновлення з версій до 2.6.0**: видаліть старі ресурси `/local/ha_datakom/datakom-controller-card.js` і `/local/ha_datakom/datakom-controller-card-editor.js` у **Налаштування → Панелі → Ресурси** та папку `config/www/ha_datakom`; у налаштуваннях картки замініть шлях до зображень `/local/community/ha_datakom/img/` на `/ha_datakom/img/`.
 
 ## Налаштування
 
@@ -514,16 +507,17 @@ HA_datakom/
 │       ├── config_flow.py        # UI налаштування
 │       ├── manifest.json         # Метадані інтеграції
 │       ├── services.yaml         # Визначення служб
-│       └── translations/
-│           ├── en.json           # Англійські переклади
-│           ├── ru.json           # Російські переклади
-│           └── uk.json           # Українські переклади
+│       ├── translations/
+│       │   ├── en.json           # Англійські переклади
+│       │   ├── ru.json           # Російські переклади
+│       │   └── uk.json           # Українські переклади
+│       └── frontend/             # Картки Lovelace, підключаються автоматично
+│           ├── datakom-controller-card.js        # Користувацькі картки Lovelace
+│           ├── datakom-controller-card-editor.js # Візуальний редактор
+│           └── img/              # Зображення
 ├── www/
 │   └── ha_datakom/
-│       ├── datakom-controller-card.js        # Користувацька картка Lovelace
-│       ├── datakom-controller-card-editor.js # Візуальний редактор
-│       ├── README.md             # Документація картки
-│       └── img/                  # Зображення кнопок
+│       └── README.md             # Документація картки
 ├── dashboard/
 │   └── dashboard_demo.yaml       # Приклад панелі
 ├── configuration.yaml

@@ -1,39 +1,39 @@
   - action: run
     label: RUN
-    image_on: /local/community/ha_datakom/img/run-k.png
-    image_off: /local/community/ha_datakom/img/run.png
+    image_on: /ha_datakom/img/run-k.png
+    image_off: /ha_datakom/img/run.png
     indicator_entity: binary_sensor.run
     indicator_color: green
     button_entity: button.datakom_device_control_run  # Кнопка управления
   
   - action: auto
     label: AUTO
-    image_on: /local/community/ha_datakom/img/auto-k.png
-    image_off: /local/community/ha_datakom/img/auto.png
+    image_on: /ha_datakom/img/auto-k.png
+    image_off: /ha_datakom/img/auto.png
     indicator_entity: binary_sensor.auto
     indicator_color: yellow
     button_entity: button.datakom_device_control_auto
   
   - action: manual
     label: MAN
-    image_on: /local/community/ha_datakom/img/manual-k.png
-    image_off: /local/community/ha_datakom/img/manual.png
+    image_on: /ha_datakom/img/manual-k.png
+    image_off: /ha_datakom/img/manual.png
     indicator_entity: binary_sensor.manual
     indicator_color: yellow
     button_entity: button.datakom_device_control_manual
   
   - action: test
     label: TEST
-    image_on: /local/community/ha_datakom/img/test-k.png
-    image_off: /local/community/ha_datakom/img/test.png
+    image_on: /ha_datakom/img/test-k.png
+    image_off: /ha_datakom/img/test.png
     indicator_entity: binary_sensor.test
     indicator_color: yellow
     button_entity: button.datakom_device_control_test
   
   - action: stop
     label: STOP
-    image_on: /local/community/ha_datakom/img/stop-k.png
-    image_off: /local/community/ha_datakom/img/stop.png
+    image_on: /ha_datakom/img/stop-k.png
+    image_off: /ha_datakom/img/stop.png
     indicator_entity: binary_sensor.stop
     indicator_color: yellow
     button_entity: button.datakom_device_control_stop
@@ -46,30 +46,12 @@
 
 ## Установка
 
-### Вариант 1: Через HACS (рекомендуется)
-1. Откройте HACS в Home Assistant
-2. Перейдите в раздел "Frontend"
-3. Нажмите "+" и найдите "Datakom Controller Card"
-4. Установите карточку
-5. Перезагрузите Home Assistant
-6. Если ресурс не добавился автоматически, добавьте его вручную:
-  - **Settings → Dashboards → Resources → Add Resource**
-  - URL: `/local/ha_datakom/datakom-controller-card.js`, Type: **JavaScript Module**
-  - URL: `/local/ha_datakom/datakom-controller-card-editor.js`, Type: **JavaScript Module**
-7. Обновите страницу браузера (Ctrl+F5)
+Карточки (`datakom-controller-card`, `datakom-mimic-card`) поставляются вместе с интеграцией Datakom listener
+(файлы в `custom_components/ha_datakom/frontend/`) и подключаются автоматически: копировать файлы и добавлять
+ресурс Lovelace не нужно, они обновляются вместе с интеграцией. Картинки доступны по адресу `/ha_datakom/img/`.
 
-### Вариант 2: Вручную
-1. Скопируйте содержимое папки `www` в `config/www/ha_datakom/`:
-   ```
-   config/www/ha_datakom/
-     ├── datakom-controller-card.js
-     └── datakom-controller-card-editor.js
-   ```
-2. Добавьте ресурс в Lovelace:
-   - **Settings → Dashboards → Resources → Add Resource**
-   - URL: `/local/ha_datakom/datakom-controller-card.js`
-   - Resource type: **JavaScript Module**
-3. Перезагрузите страницу (Ctrl+F5)
+**Обновление с версий до 2.6.0**: удалите старые ресурсы `/local/ha_datakom/...` в **Settings → Dashboards → Resources**
+и папку `config/www/ha_datakom`, замените в конфигурации карточки `/local/community/ha_datakom/img/` на `/ha_datakom/img/`.
 
 ## Использование
 
@@ -178,7 +160,7 @@ mains_color: '#27ae60'       # цвет LED сети (необязательно
 mains_fail_color: '#e74c3c'  # цвет LED сети при аварии (необязательно)
 genset_color: '#f1c40f'      # цвет LED генератора (необязательно)
 style: modern                # modern (векторная схема) или classic (картинки портала Datakom)
-image_path: /local/community/ha_datakom/img/   # путь к картинкам для style: classic
+image_path: /ha_datakom/img/   # путь к картинкам для style: classic
 ```
 
 `style: classic` повторяет схему портала Datakom: кнопки MAINS / GENSET с LED (цвет по атрибуту `led_value`: 1 — жёлтый, 2 — зелёный) и картинка контакторов `MainsOn|Off_GenOn|Off.png` по `mcb` / `gcb`.
@@ -238,40 +220,40 @@ image_path: /local/community/ha_datakom/img/   # путь к картинкам 
 control_buttons:
   - action: run
     label: RUN
-    image_on: /local/community/ha_datakom/img/run-k.png
-    image_off: /local/community/ha_datakom/img/run.png
+    image_on: /ha_datakom/img/run-k.png
+    image_off: /ha_datakom/img/run.png
     indicator_entity: binary_sensor.run
     indicator_color: green
     button_entity: button.datakom_device_control_run  # Кнопка управления
   
   - action: auto
     label: AUTO
-    image_on: /local/community/ha_datakom/img/auto-k.png
-    image_off: /local/community/ha_datakom/img/auto.png
+    image_on: /ha_datakom/img/auto-k.png
+    image_off: /ha_datakom/img/auto.png
     indicator_entity: binary_sensor.auto
     indicator_color: yellow
     button_entity: button.datakom_device_control_auto
   
   - action: manual
     label: MAN
-    image_on: /local/community/ha_datakom/img/manual-k.png
-    image_off: /local/community/ha_datakom/img/manual.png
+    image_on: /ha_datakom/img/manual-k.png
+    image_off: /ha_datakom/img/manual.png
     indicator_entity: binary_sensor.manual
     indicator_color: yellow
     button_entity: button.datakom_device_control_manual
   
   - action: test
     label: TEST
-    image_on: /local/community/ha_datakom/img/test-k.png
-    image_off: /local/community/ha_datakom/img/test.png
+    image_on: /ha_datakom/img/test-k.png
+    image_off: /ha_datakom/img/test.png
     indicator_entity: binary_sensor.test
     indicator_color: yellow
     button_entity: button.datakom_device_control_test
   
   - action: stop
     label: STOP
-    image_on: /local/community/ha_datakom/img/stop-k.png
-    image_off: /local/community/ha_datakom/img/stop.png
+    image_on: /ha_datakom/img/stop-k.png
+    image_off: /ha_datakom/img/stop.png
     indicator_entity: binary_sensor.stop
     indicator_color: yellow
     button_entity: button.datakom_device_control_stop
@@ -369,8 +351,8 @@ control_buttons:
     label: TEST
     class: btn-test
     icon: ⚙
-    image_on: /local/community/ha_datakom/img/test-k.png
-    image_off: /local/community/ha_datakom/img/test.png
+    image_on: /ha_datakom/img/test-k.png
+    image_off: /ha_datakom/img/test.png
     indicator_entity: binary_sensor.test
     indicator_color: yellow
     button_entity: button.datakom_device_control_test
@@ -378,8 +360,8 @@ control_buttons:
     label: AUTO
     class: btn-auto
     icon: 🔧
-    image_on: /local/community/ha_datakom/img/auto-k.png
-    image_off: /local/community/ha_datakom/img/auto.png
+    image_on: /ha_datakom/img/auto-k.png
+    image_off: /ha_datakom/img/auto.png
     indicator_entity: binary_sensor.auto
     indicator_color: green
     button_entity: button.datakom_device_control_auto
@@ -387,8 +369,8 @@ control_buttons:
     label: MAN
     class: btn-manual
     icon: ✋
-    image_on: /local/community/ha_datakom/img/manual-k.png
-    image_off: /local/community/ha_datakom/img/manual.png
+    image_on: /ha_datakom/img/manual-k.png
+    image_off: /ha_datakom/img/manual.png
     indicator_entity: binary_sensor.manual
     indicator_color: yellow
     button_entity: button.datakom_device_control_manual
@@ -396,8 +378,8 @@ control_buttons:
     label: STOP
     class: btn-stop
     icon: O
-    image_on: /local/community/ha_datakom/img/stop-k.png
-    image_off: /local/community/ha_datakom/img/stop.png
+    image_on: /ha_datakom/img/stop-k.png
+    image_off: /ha_datakom/img/stop.png
     indicator_entity: binary_sensor.stop
     indicator_color: red
     button_entity: button.datakom_device_control_stop
@@ -405,8 +387,8 @@ control_buttons:
     label: RUN
     class: btn-run
     icon: I
-    image_on: /local/community/ha_datakom/img/run-k.png
-    image_off: /local/community/ha_datakom/img/run.png
+    image_on: /ha_datakom/img/run-k.png
+    image_off: /ha_datakom/img/run.png
     indicator_entity: binary_sensor.run
     indicator_color: green
     button_entity: button.datakom_device_control_run

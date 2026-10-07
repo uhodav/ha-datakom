@@ -183,8 +183,8 @@ views:
             label: TEST
             class: ''
             icon: ⚙
-            image_on: /local/community/ha_datakom/img/test-k.png
-            image_off: /local/community/ha_datakom/img/test.png
+            image_on: /ha_datakom/img/test-k.png
+            image_off: /ha_datakom/img/test.png
             indicator_entity: binary_sensor.datakom_device_test
             indicator_color: yellow
             button_entity: button.datakom_device_control_test
@@ -193,16 +193,16 @@ views:
             label: RUN
             class: ''
             icon: I
-            image_on: /local/community/ha_datakom/img/run-k.png
-            image_off: /local/community/ha_datakom/img/run.png
+            image_on: /ha_datakom/img/run-k.png
+            image_off: /ha_datakom/img/run.png
             indicator_entity: binary_sensor.datakom_device_run
             indicator_color: yellow
           - action: manual
             label: MAN
             class: ''
             icon: ✋
-            image_on: /local/community/ha_datakom/img/manual-k.png
-            image_off: /local/community/ha_datakom/img/manual.png
+            image_on: /ha_datakom/img/manual-k.png
+            image_off: /ha_datakom/img/manual.png
             indicator_entity: binary_sensor.datakom_device_manual
             indicator_color: yellow
             button_entity: button.datakom_device_control_manual
@@ -211,8 +211,8 @@ views:
             label: AUTO
             class: ''
             icon: 🔧
-            image_on: /local/community/ha_datakom/img/auto-k.png
-            image_off: /local/community/ha_datakom/img/auto.png
+            image_on: /ha_datakom/img/auto-k.png
+            image_off: /ha_datakom/img/auto.png
             indicator_entity: binary_sensor.datakom_device_auto
             indicator_color: green
             button_entity: button.datakom_device_control_auto
@@ -220,8 +220,8 @@ views:
             label: STOP
             class: ''
             icon: O
-            image_on: /local/community/ha_datakom/img/stop-k.png
-            image_off: /local/community/ha_datakom/img/stop.png
+            image_on: /ha_datakom/img/stop-k.png
+            image_off: /ha_datakom/img/stop.png
             indicator_entity: binary_sensor.datakom_device_stop
             indicator_color: yellow
             button_entity: button.datakom_device_control_stop

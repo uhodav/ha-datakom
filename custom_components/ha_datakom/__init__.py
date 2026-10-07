@@ -1,7 +1,10 @@
 import logging
+from pathlib import Path
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.loader import async_get_integration
 
 from .coordinator import DEFAULT_SCAN_INTERVAL, DatakomCoordinator
 
@@ -10,8 +13,35 @@ _LOGGER = logging.getLogger(__name__)
 
 __all__ = ["DOMAIN", "_cleanup_old_entities"]
 
+# Карточки Lovelace поставляются с интеграцией: файлы из frontend/ отдаются по этому адресу
+# и подключаются во фронтенд автоматически, копировать их и добавлять ресурс не нужно
+FRONTEND_URL = "/ha_datakom"
+FRONTEND_SCRIPTS = ["datakom-controller-card.js", "datakom-controller-card-editor.js"]
+
+
+async def _async_register_frontend(hass: HomeAssistant) -> None:
+    if hass.data.get(f"{DOMAIN}_frontend"):
+        return
+    hass.data[f"{DOMAIN}_frontend"] = True
+
+    path = str(Path(__file__).parent / "frontend")
+    try:
+        from homeassistant.components.http import StaticPathConfig
+        await hass.http.async_register_static_paths([StaticPathConfig(FRONTEND_URL, path, True)])
+    except ImportError:
+        # Home Assistant до 2024.7
+        hass.http.register_static_path(FRONTEND_URL, path, True)
+
+    # Версия в адресе - чтобы после обновления браузер не брал старый файл из кэша
+    version = (await async_get_integration(hass, DOMAIN)).version
+    for script in FRONTEND_SCRIPTS:
+        add_extra_js_url(hass, f"{FRONTEND_URL}/{script}?v={version}")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Datakom from a config entry (UI)."""
+    await _async_register_frontend(hass)
+
     coordinator = DatakomCoordinator(
         hass,
         api_url=entry.data.get("api_url", ""),

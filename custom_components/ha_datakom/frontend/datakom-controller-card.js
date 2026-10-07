@@ -12,11 +12,11 @@ class DatakomControllerCard extends HTMLElement {
         // Показываем предупреждение в UI
         const warning = document.createElement('div');
         warning.style.cssText = 'background:#e74c3c;color:#fff;padding:16px;border-radius:8px;font-size:16px;text-align:center;margin:16px 0;z-index:9999;';
-        warning.innerHTML = '⚠️ Datakom Controller Card не подключена как ресурс Lovelace!<br>Добавьте <b>/local/ha_datakom/datakom-controller-card.js</b> в ресурсы Lovelace.';
+        warning.innerHTML = '⚠️ Datakom Controller Card не загружена!<br>Карточка подключается интеграцией Datakom listener: обновите интеграцию и перезапустите Home Assistant.';
         // Вставляем предупреждение в начало body
         document.body.prepend(warning);
         // Также лог в консоль
-        console.warn('Datakom Controller Card не подключена как ресурс Lovelace! Добавьте /local/ha_datakom/datakom-controller-card.js в ресурсы Lovelace.');
+        console.warn('Datakom Controller Card не загружена! Карточка подключается интеграцией Datakom listener: обновите интеграцию и перезапустите Home Assistant.');
       }
     }
   }
@@ -731,8 +731,8 @@ class DatakomControllerCard extends HTMLElement {
           label: 'TEST', 
           class: 'btn-test', 
           icon: '⚙',
-          image_on: '/local/community/ha_datakom/img/test_on.png',
-          image_off: '/local/community/ha_datakom/img/test_off.png',
+          image_on: '/ha_datakom/img/test-k.png',
+          image_off: '/ha_datakom/img/test.png',
           indicator_entity: 'binary_sensor.test', 
           indicator_color: 'yellow',
           button_entity: 'button.datakom_device_control_test'
@@ -742,8 +742,8 @@ class DatakomControllerCard extends HTMLElement {
           label: 'AUTO', 
           class: 'btn-auto', 
           icon: '🔧',
-          image_on: '/local/community/ha_datakom/img/auto_on.png',
-          image_off: '/local/community/ha_datakom/img/auto_off.png',
+          image_on: '/ha_datakom/img/auto-k.png',
+          image_off: '/ha_datakom/img/auto.png',
           indicator_entity: 'binary_sensor.auto', 
           indicator_color: 'green',
           button_entity: 'button.datakom_device_control_auto'
@@ -753,8 +753,8 @@ class DatakomControllerCard extends HTMLElement {
           label: 'MAN', 
           class: 'btn-manual', 
           icon: '✋',
-          image_on: '/local/community/ha_datakom/img/manual_on.png',
-          image_off: '/local/community/ha_datakom/img/manual_off.png',
+          image_on: '/ha_datakom/img/manual-k.png',
+          image_off: '/ha_datakom/img/manual.png',
           indicator_entity: 'binary_sensor.manual', 
           indicator_color: 'yellow',
           button_entity: 'button.datakom_device_control_manual'
@@ -764,8 +764,8 @@ class DatakomControllerCard extends HTMLElement {
           label: 'STOP', 
           class: 'btn-stop', 
           icon: 'O',
-          image_on: '/local/community/ha_datakom/img/stop_on.png',
-          image_off: '/local/community/ha_datakom/img/stop_off.png',
+          image_on: '/ha_datakom/img/stop-k.png',
+          image_off: '/ha_datakom/img/stop.png',
           indicator_entity: 'binary_sensor.stop', 
           indicator_color: 'yellow',
           button_entity: 'button.datakom_device_control_stop'
@@ -775,8 +775,8 @@ class DatakomControllerCard extends HTMLElement {
           label: 'RUN', 
           class: 'btn-run', 
           icon: 'I',
-          image_on: '/local/community/ha_datakom/img/run_on.png',
-          image_off: '/local/community/ha_datakom/img/run_off.png',
+          image_on: '/ha_datakom/img/run-k.png',
+          image_off: '/ha_datakom/img/run.png',
           indicator_entity: 'binary_sensor.run', 
           indicator_color: 'yellow'
         }
@@ -816,7 +816,7 @@ class DatakomMimicCard extends HTMLElement {
       mains_fail_color: '#e74c3c',
       genset_color: '#f1c40f',
       style: 'modern',
-      image_path: '/local/community/ha_datakom/img/',
+      image_path: '/ha_datakom/img/',
       ...(config || {}),
     };
     this.render();
@@ -1130,7 +1130,7 @@ if (!window.customCards.some(card => card.type === 'datakom-mimic-card')) window
 });
 
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.4.1 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.5.0 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );

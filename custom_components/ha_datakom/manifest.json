@@ -5,8 +5,12 @@
     "@uhodav"
   ],
   "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
   "documentation": "https://github.com/uhodav/ha-datakom",
   "requirements": [],
-  "version": "2.5.1",
+  "version": "2.6.0",
   "iot_class": "cloud_polling"
 }
