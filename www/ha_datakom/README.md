@@ -161,6 +161,26 @@ control_buttons:
     indicator_color: yellow
 ```
 
+## Карточка мнемосхемы (datakom-mimic-card)
+
+Отдельная горизонтальная схема, как на портале Datakom: MAINS — MCB — LOAD — GCB — GENSET.
+Подключается тем же ресурсом `datakom-controller-card.js`, отдельный ресурс не нужен.
+
+```yaml
+type: custom:datakom-mimic-card
+title: Мнемосхема            # необязательно
+mains: binary_sensor.datakom_device_mains
+mcb: binary_sensor.datakom_device_mcb
+gcb: binary_sensor.datakom_device_gcb
+genset: binary_sensor.datakom_device_genset
+mains_color: '#27ae60'       # цвет LED сети (необязательно)
+genset_color: '#f1c40f'      # цвет LED генератора (необязательно)
+```
+
+- LED над MAINS / GENSET горят, когда сеть / генератор доступны
+- Нож контактора замкнут по `mcb` / `gcb`
+- Линии под напряжением и LOAD подсвечиваются, когда нагрузка питается от сети (MAINS + MCB) или генератора (GENSET + GCB)
+
 ## Параметры конфигурации
 
 ### Основные параметры

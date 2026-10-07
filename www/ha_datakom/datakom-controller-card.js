@@ -783,8 +783,262 @@ window.customCards.push({
   documentationURL: 'https://github.com/uhodav/ha-datakom'
 });
 
+// Горизонтальная мнемосхема: MAINS — MCB — LOAD — GCB — GENSET
+class DatakomMimicCard extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  setConfig(config) {
+    this.config = {
+      mains: 'binary_sensor.datakom_device_mains',
+      mcb: 'binary_sensor.datakom_device_mcb',
+      gcb: 'binary_sensor.datakom_device_gcb',
+      genset: 'binary_sensor.datakom_device_genset',
+      mains_color: '#27ae60',
+      genset_color: '#f1c40f',
+      ...(config || {}),
+    };
+    this.render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this.updateStates();
+  }
+
+  getCardSize() {
+    return 3;
+  }
+
+  static getStubConfig() {
+    return {
+      mains: 'binary_sensor.datakom_device_mains',
+      mcb: 'binary_sensor.datakom_device_mcb',
+      gcb: 'binary_sensor.datakom_device_gcb',
+      genset: 'binary_sensor.datakom_device_genset',
+    };
+  }
+
+  renderSwitch(id, label) {
+    return `
+      <div class="switch" id="${id}">
+        <span class="switch-label">${label}</span>
+        <svg viewBox="0 0 60 24" preserveAspectRatio="none">
+          <line class="wire" x1="0" y1="16" x2="14" y2="16"></line>
+          <circle class="contact" cx="16" cy="16" r="3"></circle>
+          <line class="blade" x1="16" y1="16" x2="44" y2="16"></line>
+          <circle class="contact" cx="44" cy="16" r="3"></circle>
+          <line class="wire" x1="46" y1="16" x2="60" y2="16"></line>
+        </svg>
+      </div>
+    `;
+  }
+
+  render() {
+    if (!this.config) return;
+    this.shadowRoot.innerHTML = `
+      <style>
+        ha-card {
+          padding: 16px;
+          --wire-off: #888;
+          --wire-on: #4caf50;
+        }
+        .title {
+          font-size: 16px;
+          font-weight: 500;
+          margin-bottom: 8px;
+          color: var(--primary-text-color);
+        }
+        .mimic {
+          display: flex;
+          align-items: center;
+        }
+        .node {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          flex: 0 0 auto;
+        }
+        .led {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #666;
+          transition: all 0.3s ease;
+        }
+        .led.placeholder {
+          visibility: hidden;
+        }
+        .circle {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          border: 2px solid var(--wire-off);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--card-background-color, #1c1c1c);
+          transition: border-color 0.3s ease;
+        }
+        .circle ha-icon {
+          --mdc-icon-size: 32px;
+          color: var(--primary-text-color);
+        }
+        .load .circle {
+          width: 78px;
+          height: 78px;
+          border-width: 3px;
+        }
+        .node.on .circle {
+          border-color: var(--wire-on);
+        }
+        .node-label {
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          color: var(--primary-text-color);
+        }
+        .wire-seg {
+          flex: 1 1 0;
+          min-width: 8px;
+          height: 4px;
+          background: var(--wire-off);
+          border-radius: 2px;
+          margin-top: 18px;
+          transition: background 0.3s ease;
+        }
+        .wire-seg.on {
+          background: var(--wire-on);
+        }
+        .switch {
+          flex: 1.2 1 0;
+          min-width: 40px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-top: 18px;
+        }
+        .switch svg {
+          width: 100%;
+          height: 24px;
+          overflow: visible;
+        }
+        .switch-label {
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--secondary-text-color);
+          margin-bottom: -6px;
+        }
+        .switch line {
+          stroke: var(--wire-off);
+          stroke-width: 4;
+          stroke-linecap: round;
+          transition: stroke 0.3s ease;
+        }
+        .switch circle {
+          fill: var(--wire-off);
+          transition: fill 0.3s ease;
+        }
+        .switch .blade {
+          transform-origin: 16px 16px;
+          transform: rotate(-25deg);
+          transition: transform 0.3s ease, stroke 0.3s ease;
+        }
+        .switch.closed .blade {
+          transform: rotate(0deg);
+        }
+        .switch.on line, .switch.on .blade {
+          stroke: var(--wire-on);
+        }
+        .switch.on circle {
+          fill: var(--wire-on);
+        }
+      </style>
+      <ha-card>
+        ${this.config.title ? `<div class="title">${this.config.title}</div>` : ''}
+        <div class="mimic">
+          <div class="node" id="mains-node">
+            <div class="led" id="mains-led"></div>
+            <div class="circle"><ha-icon icon="mdi:transmission-tower"></ha-icon></div>
+            <span class="node-label">MAINS</span>
+          </div>
+          <div class="wire-seg" id="mains-wire"></div>
+          ${this.renderSwitch('mcb', 'MCB')}
+          <div class="wire-seg" id="mains-load-wire"></div>
+          <div class="node load" id="load-node">
+            <div class="led placeholder"></div>
+            <div class="circle"><ha-icon icon="mdi:factory"></ha-icon></div>
+            <span class="node-label">LOAD</span>
+          </div>
+          <div class="wire-seg" id="genset-load-wire"></div>
+          ${this.renderSwitch('gcb', 'GCB')}
+          <div class="wire-seg" id="genset-wire"></div>
+          <div class="node" id="genset-node">
+            <div class="led" id="genset-led"></div>
+            <div class="circle"><ha-icon icon="mdi:engine"></ha-icon></div>
+            <span class="node-label">GENSET</span>
+          </div>
+        </div>
+      </ha-card>
+    `;
+    this.updateStates();
+  }
+
+  isOn(entity) {
+    const stateObj = entity && this._hass && this._hass.states[entity];
+    return !!stateObj && stateObj.state === 'on';
+  }
+
+  updateStates() {
+    if (!this._hass || !this.shadowRoot.querySelector('.mimic')) return;
+    const root = this.shadowRoot;
+    const mains = this.isOn(this.config.mains);
+    const mcb = this.isOn(this.config.mcb);
+    const gcb = this.isOn(this.config.gcb);
+    const genset = this.isOn(this.config.genset);
+    const fromMains = mains && mcb;
+    const fromGenset = genset && gcb;
+
+    const setLed = (id, on, color) => {
+      const led = root.getElementById(id);
+      led.style.background = on ? color : '';
+      led.style.boxShadow = on ? `0 0 10px ${color}` : '';
+    };
+    setLed('mains-led', mains, this.config.mains_color);
+    setLed('genset-led', genset, this.config.genset_color);
+
+    root.getElementById('mains-node').classList.toggle('on', mains);
+    root.getElementById('genset-node').classList.toggle('on', genset);
+    root.getElementById('load-node').classList.toggle('on', fromMains || fromGenset);
+    root.getElementById('mains-wire').classList.toggle('on', mains);
+    root.getElementById('genset-wire').classList.toggle('on', genset);
+    root.getElementById('mains-load-wire').classList.toggle('on', fromMains);
+    root.getElementById('genset-load-wire').classList.toggle('on', fromGenset);
+
+    const mcbEl = root.getElementById('mcb');
+    mcbEl.classList.toggle('closed', mcb);
+    mcbEl.classList.toggle('on', fromMains);
+    const gcbEl = root.getElementById('gcb');
+    gcbEl.classList.toggle('closed', gcb);
+    gcbEl.classList.toggle('on', fromGenset);
+  }
+}
+
+customElements.define('datakom-mimic-card', DatakomMimicCard);
+
+window.customCards.push({
+  type: 'datakom-mimic-card',
+  name: 'Datakom Mimic Card',
+  description: 'Mains / genset mimic diagram (MCB, GCB, load)',
+  preview: true,
+  documentationURL: 'https://github.com/uhodav/ha-datakom'
+});
+
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.1.0 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.2.0 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );

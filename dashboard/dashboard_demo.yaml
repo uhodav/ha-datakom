@@ -135,6 +135,11 @@ views:
             - ⚠️ {{ alarm }}
               {% endfor %}
             {% else %} Нет активных алармов {% endif %}
+      - type: custom:datakom-mimic-card
+        mains: binary_sensor.datakom_device_mains
+        mcb: binary_sensor.datakom_device_mcb
+        gcb: binary_sensor.datakom_device_gcb
+        genset: binary_sensor.datakom_device_genset
       - type: custom:datakom-controller-card
         model: D-500 MK3
         status_title: ''
