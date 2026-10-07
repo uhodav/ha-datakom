@@ -294,6 +294,15 @@
       },
       "test": {
         "name": "Test Mode"
+      },
+      "auto_ready": {
+        "name": "Auto Ready"
+      },
+      "mcb": {
+        "name": "Mains Contactor"
+      },
+      "gcb": {
+        "name": "Genset Contactor"
       }
     },
     "button": {

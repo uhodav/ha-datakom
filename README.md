@@ -101,8 +101,10 @@ Parameters from the API are automatically converted to sensors:
 
 ### Binary Sensors
 - **`binary_sensor.api_connection`** - API connection status
-- **`binary_sensor.mains`** - Mains power LED status (calculated: on when generator is not running)
-- **`binary_sensor.genset`** - Generator LED status (calculated: on when generator is running)
+- **`binary_sensor.mains`** - MAINS AVAILABLE LED of the panel
+- **`binary_sensor.genset`** - GENSET AVAILABLE LED of the panel
+- **`binary_sensor.auto_ready`** - AUTO READY LED of the panel
+- **`binary_sensor.mcb`**, **`binary_sensor.gcb`** - Mains / genset contactor LEDs of the panel
 - **`binary_sensor.auto`** - Auto mode LED (calculated: on when mode is AUTO)
 - **`binary_sensor.manual`** - Manual mode LED (calculated: on when mode is MANUAL)
 - **`binary_sensor.alarm`** - Alarm LED (calculated: on when any alarm is active)
@@ -110,7 +112,7 @@ Parameters from the API are automatically converted to sensors:
 - **`binary_sensor.alarm_warning`** - Warning alarms
 - **`binary_sensor.alarm_loaddump`** - LoadDump alarms
 
-**Note**: LED indicators are now calculated from generator state and mode parameters, not from direct API endpoints.
+**Note**: LED indicators are taken from the controller panel LED block (API parameter 112), so they match the physical panel; the `blink` attribute is `true` while the LED is flashing. With an older API server without parameter 112 they are calculated from the genset mode and state.
 
 ### Buttons
 - **`button.datakom_device_refresh`** - Refresh data now (without waiting for the update interval)
@@ -455,8 +457,10 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Бінарні сенсори
 - **`binary_sensor.api_connection`** - Стан підключення до API
-- **`binary_sensor.mains`** - Стан LED мережі (розраховується: увімкнено коли генератор не працює)
-- **`binary_sensor.genset`** - Стан LED генератора (розраховується: увімкнено коли генератор працює)
+- **`binary_sensor.mains`** - LED панелі «мережа доступна» (MAINS AVAILABLE)
+- **`binary_sensor.genset`** - LED панелі «генератор доступний» (GENSET AVAILABLE)
+- **`binary_sensor.auto_ready`** - LED панелі AUTO READY
+- **`binary_sensor.mcb`**, **`binary_sensor.gcb`** - LED контакторів мережі / генератора
 - **`binary_sensor.auto`** - LED автоматичного режиму (розраховується: увімкнено в режимі AUTO)
 - **`binary_sensor.manual`** - LED ручного режиму (розраховується: увімкнено в режимі MANUAL)
 - **`binary_sensor.alarm`** - LED аварії (розраховується: увімкнено при наявності активних аварій)
@@ -464,7 +468,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **`binary_sensor.alarm_warning`** - Попереджувальні аварії
 - **`binary_sensor.alarm_loaddump`** - Аварії скидання навантаження
 
-**Примітка**: Індикатори LED тепер розраховуються на основі стану та режиму генератора, а не з прямих API endpoints.
+**Примітка**: Індикатори LED беруться з блоку світлодіодів панелі контролера (параметр API 112), тому збігаються з фізичною панеллю; атрибут `blink` = `true`, поки LED блимає. Зі старим API-сервером без параметра 112 вони розраховуються з режиму та стану генератора.
 
 ### Кнопки
 - **`button.datakom_device_refresh`** - Оновити дані зараз (не чекаючи інтервалу оновлення)

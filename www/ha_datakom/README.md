@@ -92,16 +92,18 @@ display_title: GEN PHASE VOLTAGES
 status_indicators:
   - label: AUTO READY
     color: green
-    entity: binary_sensor.auto
+    entity: binary_sensor.datakom_device_auto_ready
   - label: ALARM
     color: red
-    entity: binary_sensor.alarm_shutdown
+    entity:
+      - binary_sensor.datakom_device_alarm_shutdown
+      - binary_sensor.datakom_device_alarm_loaddump
   - label: WARNING
     color: red
-    entity: binary_sensor.alarm_warning
+    entity: binary_sensor.datakom_device_alarm_warning
   - label: SERVICE REQUEST
     color: red
-    entity: binary_sensor.service_required
+    entity: ''
 
 # Центральный дисплей - значения напряжений
 display_values:
@@ -119,11 +121,11 @@ display_values:
     entity2: sensor.mains_l3_l1
 
 # Правая секция - Mimic Diagram (системная схема)
-mains_available_entity: binary_sensor.mains
-mains_contactor_entity: binary_sensor.mains_contactor
-load_switch_entity: binary_sensor.load_active
-genset_contactor_entity: binary_sensor.genset_contactor
-genset_available_entity: binary_sensor.genset
+mimic:
+  mains: binary_sensor.datakom_device_mains
+  mcb: binary_sensor.datakom_device_mcb
+  gcb: binary_sensor.datakom_device_gcb
+  genset: binary_sensor.datakom_device_genset
 
 # Кнопки управления с индикаторами
 control_buttons:
@@ -150,13 +152,13 @@ control_buttons:
     class: btn-stop
     icon: O
     indicator_entity: binary_sensor.stop
-    indicator_color: red
+    indicator_color: yellow
   - action: run
     label: RUN
     class: btn-run
     icon: I
     indicator_entity: binary_sensor.run
-    indicator_color: green
+    indicator_color: yellow
 ```
 
 ## Параметры конфигурации
@@ -169,18 +171,22 @@ control_buttons:
 Индикаторы в левой части (STATUS секция):
 - `label` - Текстовая метка
 - `color` - Цвет LED: `green`, `red`, `yellow`
-- `entity` - ID сенсора (binary_sensor)
+- `entity` - ID сенсора (binary_sensor) или список ID: LED горит, если горит любой из них
 
 ### display_values (массив)
 Значения на центральном дисплее:
 - `label` - Метка (L1, L2, L3 и т.д.)
 - `entity` - ID сенсора с числовым значением
 
-### side_indicators (массив)
-Вертикальные индикаторы справа:
-- `label` - Метка (MAINS, LOAD, GENSET)
-- `color` - Цвет LED: `green`, `red`, `yellow`
-- `entity` - ID сенсора (binary_sensor)
+### mimic (объект)
+Мнемосхема справа, как на панели D500: MAINS → контактор сети → LOAD ← контактор генератора ← GENSET:
+- `mains` - LED «сеть доступна» (зелёный)
+- `mcb` - LED и положение контактора сети (зелёный)
+- `gcb` - LED и положение контактора генератора (жёлтый)
+- `genset` - LED «генератор доступен» (жёлтый)
+
+Состояния берутся из светодиодов панели (параметр API 112), мигание LED передаётся атрибутом `blink` и отображается на карточке.
+Старый параметр `side_indicators` (MAINS / GENSET) поддерживается: его сущности используются для `mains` и `genset`, если `mimic` не задан.
 
 ### control_buttons (массив)
 Кнопки управления внизу:

@@ -236,6 +236,79 @@ class DatakomControllerCard extends HTMLElement {
         .side-led.green.on { background: #27ae60; }
         .side-led.red.on { background: #e74c3c; }
         .side-led.yellow.on { background: #f39c12; }
+
+        .led.blink, .side-led.blink, .button-indicator.blink {
+          animation: led-blink 0.8s steps(1) infinite;
+        }
+
+        @keyframes led-blink {
+          50% { opacity: 0.15; }
+        }
+
+        .mimic {
+          display: grid;
+          grid-template-columns: 14px 26px auto;
+          grid-template-rows: auto 34px auto 34px auto;
+          align-items: center;
+          column-gap: 6px;
+          color: #ccc;
+          font-size: 10px;
+          text-transform: uppercase;
+        }
+
+        .mimic ha-icon {
+          --mdc-icon-size: 22px;
+          color: #ddd;
+        }
+
+        .mimic-label {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .mimic-line {
+          justify-self: center;
+          width: 2px;
+          height: 100%;
+          background: #666;
+        }
+
+        .mimic-switch {
+          position: relative;
+          justify-self: center;
+          width: 26px;
+          height: 34px;
+        }
+
+        .mimic-switch::before, .mimic-switch::after {
+          content: '';
+          position: absolute;
+          left: 12px;
+          width: 2px;
+          height: 8px;
+          background: #666;
+        }
+
+        .mimic-switch::before { top: 0; }
+        .mimic-switch::after { bottom: 0; }
+
+        .mimic-blade {
+          position: absolute;
+          left: 12px;
+          top: 8px;
+          width: 2px;
+          height: 18px;
+          background: #888;
+          transform-origin: bottom center;
+          transform: rotate(35deg);
+          transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .mimic-switch.closed .mimic-blade {
+          transform: rotate(0deg);
+          background: #27ae60;
+        }
         
         .control-buttons {
           display: flex;
@@ -374,9 +447,9 @@ class DatakomControllerCard extends HTMLElement {
             </div>
           </div>
           
-          <!-- Right: Side Indicators -->
+          <!-- Right: Mimic Diagram -->
           <div class="side-indicators">
-            ${this.renderSideIndicators()}
+            ${this.renderMimic()}
           </div>
         </div>
         
@@ -395,7 +468,7 @@ class DatakomControllerCard extends HTMLElement {
     return indicators.map(indicator => `
       <div class="status-indicator">
         <span class="status-label">${indicator.label || ''}</span>
-        <div class="led ${indicator.color || 'red'}" data-entity="${indicator.entity || ''}"></div>
+        <div class="led ${indicator.color || 'red'}" data-entity="${[].concat(indicator.entity || []).join(',')}"></div>
       </div>
     `).join('');
   }
@@ -420,13 +493,49 @@ class DatakomControllerCard extends HTMLElement {
     `).join('');
   }
 
+  renderMimic() {
+    const m = this.getMimicEntities();
+    return `
+      <div class="mimic">
+        <div class="side-led green" data-entity="${m.mains}"></div>
+        <ha-icon icon="mdi:transmission-tower"></ha-icon>
+        <span class="mimic-label">MAINS</span>
+        <div class="side-led green" data-entity="${m.mcb}"></div>
+        <div class="mimic-switch" data-entity="${m.mcb}"><div class="mimic-blade"></div></div>
+        <span></span>
+        <span></span>
+        <div class="mimic-line"></div>
+        <span class="mimic-label"><ha-icon icon="mdi:factory"></ha-icon>LOAD</span>
+        <div class="side-led yellow" data-entity="${m.gcb}"></div>
+        <div class="mimic-switch" data-entity="${m.gcb}"><div class="mimic-blade"></div></div>
+        <span></span>
+        <div class="side-led yellow" data-entity="${m.genset}"></div>
+        <ha-icon icon="mdi:engine"></ha-icon>
+        <span class="mimic-label">GENSET</span>
+      </div>
+    `;
+  }
+
+  getMimicEntities() {
+    // Совместимость со старой конфигурацией side_indicators (MAINS / GENSET)
+    const legacy = {};
+    (this.config.side_indicators || []).forEach(i => { legacy[(i.label || '').toLowerCase()] = i.entity; });
+    const mimic = this.config.mimic || {};
+    return {
+      mains: mimic.mains || legacy.mains || 'binary_sensor.datakom_device_mains',
+      mcb: mimic.mcb || 'binary_sensor.datakom_device_mcb',
+      gcb: mimic.gcb || 'binary_sensor.datakom_device_gcb',
+      genset: mimic.genset || legacy.genset || 'binary_sensor.datakom_device_genset',
+    };
+  }
+
   renderControlButtons() {
     const buttons = this.config.control_buttons || [
       { action: 'test', label: 'TEST', class: 'btn-test', icon: '⚙', indicator_entity: 'binary_sensor.test', indicator_color: 'yellow' },
       { action: 'auto', label: 'AUTO', class: 'btn-auto', icon: '🔧', indicator_entity: 'binary_sensor.auto', indicator_color: 'green' },
       { action: 'manual', label: 'MAN', class: 'btn-manual', icon: '✋', indicator_entity: 'binary_sensor.manual', indicator_color: 'yellow' },
-      { action: 'stop', label: 'STOP', class: 'btn-stop', icon: 'O', indicator_entity: 'binary_sensor.stop', indicator_color: 'red' },
-      { action: 'run', label: 'RUN', class: 'btn-run', icon: 'I', indicator_entity: 'binary_sensor.run', indicator_color: 'green' }
+      { action: 'stop', label: 'STOP', class: 'btn-stop', icon: 'O', indicator_entity: 'binary_sensor.stop', indicator_color: 'yellow' },
+      { action: 'run', label: 'RUN', class: 'btn-run', icon: 'I', indicator_entity: 'binary_sensor.run', indicator_color: 'yellow' }
     ];
     
     return buttons.map(btn => {
@@ -513,36 +622,48 @@ class DatakomControllerCard extends HTMLElement {
     }
   }
 
-  updateStates() {
-    if (!this._hass || !this.shadowRoot) return;
-    
-    // Update status LEDs
-    this.shadowRoot.querySelectorAll('.status-indicator .led').forEach(led => {
-      const entity = led.getAttribute('data-entity');
-      if (entity && this._hass.states[entity]) {
-        const state = this._hass.states[entity].state;
-        led.classList.toggle('on', state === 'on' || state === 'true');
+  // Состояние LED по одной или нескольким сущностям (через запятую): горит если горит любая
+  ledState(entityAttr) {
+    const result = { known: false, on: false, blink: false };
+    (entityAttr || '').split(',').filter(Boolean).forEach(entity => {
+      const stateObj = this._hass.states[entity];
+      if (!stateObj) return;
+      result.known = true;
+      if (stateObj.state === 'on' || stateObj.state === 'true') {
+        result.on = true;
+        result.blink = result.blink || stateObj.attributes.blink === true;
       }
     });
-    
-    // Update side LEDs (используем ту же логику что и для status indicators)
-    this.shadowRoot.querySelectorAll('.side-indicator .side-led').forEach(led => {
-      const entity = led.getAttribute('data-entity');
-      if (entity && this._hass.states[entity]) {
-        const state = this._hass.states[entity].state;
-        led.classList.toggle('on', state === 'on' || state === 'true');
+    return result;
+  }
+
+  updateStates() {
+    if (!this._hass || !this.shadowRoot) return;
+
+    // Update status, side and mimic LEDs
+    this.shadowRoot.querySelectorAll('.status-indicator .led, .side-led').forEach(led => {
+      const state = this.ledState(led.getAttribute('data-entity'));
+      if (state.known) {
+        led.classList.toggle('on', state.on);
+        led.classList.toggle('blink', state.blink);
       }
+    });
+
+    // Update mimic contactors
+    this.shadowRoot.querySelectorAll('.mimic-switch').forEach(sw => {
+      const state = this.ledState(sw.getAttribute('data-entity'));
+      sw.classList.toggle('closed', state.on && !state.blink);
     });
     
     // Update button indicators и картинки
     this.shadowRoot.querySelectorAll('.button-circle').forEach(button => {
       const indicator = button.querySelector('.button-indicator');
       if (indicator) {
-        const entity = indicator.getAttribute('data-entity');
-        if (entity && this._hass.states[entity]) {
-          const state = this._hass.states[entity].state;
-          const isOn = state === 'on' || state === 'true';
+        const ledState = this.ledState(indicator.getAttribute('data-entity'));
+        if (ledState.known) {
+          const isOn = ledState.on;
           indicator.classList.toggle('on', isOn);
+          indicator.classList.toggle('blink', ledState.blink);
           
           // Обновляем картинки кнопок если они указаны
           const imageOn = button.getAttribute('data-image-on');
@@ -575,19 +696,22 @@ class DatakomControllerCard extends HTMLElement {
       model: 'D 500',
       display_title: 'State',
       status_indicators: [
-        { label: 'AUTO READY', color: 'green', entity: 'binary_sensor.auto' },
-        { label: 'ALARM', color: 'red', entity: 'binary_sensor.alarm_shutdown' },
-        { label: 'WARNING', color: 'red', entity: 'binary_sensor.alarm_warning' }
+        { label: 'AUTO READY', color: 'green', entity: 'binary_sensor.datakom_device_auto_ready' },
+        { label: 'ALARM', color: 'red', entity: ['binary_sensor.datakom_device_alarm_shutdown', 'binary_sensor.datakom_device_alarm_loaddump'] },
+        { label: 'WARNING', color: 'red', entity: 'binary_sensor.datakom_device_alarm_warning' },
+        { label: 'SERVICE REQUEST', color: 'red', entity: '' }
       ],
       display_values: [
         { label: 'Fuel', entity: 'sensor.engine_fuel_level' },
         { label: 'kWt', entity: 'sensor.genset_tot_active_pwr' },
         { label: 'L3', entity: 'sensor.genset_l3' }
       ],
-      side_indicators: [
-        { label: 'MAINS', color: 'green', entity: 'binary_sensor.mains' },
-        { label: 'GENSET', color: 'green', entity: 'binary_sensor.genset' }
-      ],
+      mimic: {
+        mains: 'binary_sensor.datakom_device_mains',
+        mcb: 'binary_sensor.datakom_device_mcb',
+        gcb: 'binary_sensor.datakom_device_gcb',
+        genset: 'binary_sensor.datakom_device_genset'
+      },
       control_buttons: [
         { 
           action: 'test', 
@@ -630,7 +754,7 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/ha_datakom/img/stop_on.png',
           image_off: '/local/community/ha_datakom/img/stop_off.png',
           indicator_entity: 'binary_sensor.stop', 
-          indicator_color: 'red',
+          indicator_color: 'yellow',
           button_entity: 'button.datakom_device_control_stop'
         },
         { 
@@ -641,8 +765,7 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/local/community/ha_datakom/img/run_on.png',
           image_off: '/local/community/ha_datakom/img/run_off.png',
           indicator_entity: 'binary_sensor.run', 
-          indicator_color: 'green',
-          button_entity: 'button.datakom_device_control_run'
+          indicator_color: 'yellow'
         }
       ]
     };
@@ -661,7 +784,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.0.0 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.1.0 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );

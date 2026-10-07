@@ -141,16 +141,18 @@ views:
         status_indicators:
           - label: AUTO READY
             color: green
-            entity: binary_sensor.datakom_device_auto
-          - label: shutdown
+            entity: binary_sensor.datakom_device_auto_ready
+          - label: ALARM
             color: red
-            entity: binary_sensor.datakom_alarm_shutdown
+            entity:
+              - binary_sensor.datakom_alarm_shutdown
+              - binary_sensor.datakom_alarm_loaddump
           - label: WARNING
-            color: yellow
+            color: red
             entity: binary_sensor.datakom_alarm_warning
-          - label: loaddump
-            color: yellow
-            entity: binary_sensor.datakom_alarm_loaddump
+          - label: SERVICE REQUEST
+            color: red
+            entity: ''
         display_title: ''
         display_values:
           - label: Паливо
@@ -159,13 +161,11 @@ views:
             entity: sensor.datakom_device_zagalna_aktivna_potuzhnist
           - label: До сервісу
             entity: sensor.datakom_device_godin_do_obslug_1
-        side_indicators:
-          - label: MAINS
-            color: green
-            entity: binary_sensor.datakom_device_mains
-          - label: GENSET
-            color: green
-            entity: binary_sensor.datakom_device_genset
+        mimic:
+          mains: binary_sensor.datakom_device_mains
+          mcb: binary_sensor.datakom_device_mcb
+          gcb: binary_sensor.datakom_device_gcb
+          genset: binary_sensor.datakom_device_genset
         control_buttons:
           - action: test
             label: TEST
@@ -175,6 +175,7 @@ views:
             image_off: /local/community/ha_datakom/img/test.png
             indicator_entity: binary_sensor.datakom_device_test
             indicator_color: yellow
+            button_entity: button.datakom_device_control_test
             hide_if_small: true
           - action: run
             label: RUN
@@ -183,7 +184,7 @@ views:
             image_on: /local/community/ha_datakom/img/run-k.png
             image_off: /local/community/ha_datakom/img/run.png
             indicator_entity: binary_sensor.datakom_device_run
-            indicator_color: green
+            indicator_color: yellow
           - action: manual
             label: MAN
             class: ''
@@ -192,6 +193,7 @@ views:
             image_off: /local/community/ha_datakom/img/manual.png
             indicator_entity: binary_sensor.datakom_device_manual
             indicator_color: yellow
+            button_entity: button.datakom_device_control_manual
             hide_if_small: true
           - action: auto
             label: AUTO
@@ -200,7 +202,8 @@ views:
             image_on: /local/community/ha_datakom/img/auto-k.png
             image_off: /local/community/ha_datakom/img/auto.png
             indicator_entity: binary_sensor.datakom_device_auto
-            indicator_color: yellow
+            indicator_color: green
+            button_entity: button.datakom_device_control_auto
           - action: stop
             label: STOP
             class: ''
@@ -209,9 +212,7 @@ views:
             image_off: /local/community/ha_datakom/img/stop.png
             indicator_entity: binary_sensor.datakom_device_stop
             indicator_color: yellow
-            button_entity: button.datakom_control_stop
-    visible:
-      - user: 4d3d8a5423b94e7181bc2df0955f44e7
+            button_entity: button.datakom_device_control_stop
   - title: Електроживлення
     icon: mdi:flash
     cards:
@@ -350,8 +351,6 @@ views:
           grid:
             show: true
             borderColor: '#444'
-    visible:
-      - user: 4d3d8a5423b94e7181bc2df0955f44e7
   - title: Генератор
     icon: mdi:engine
     cards:
@@ -419,8 +418,6 @@ views:
         name: Частота генератора
         icon: mdi:sine-wave
         graph: line
-    visible:
-      - user: 4d3d8a5423b94e7181bc2df0955f44e7
   - title: Енергія
     icon: mdi:counter
     cards:
@@ -442,8 +439,6 @@ views:
             name: Active Energy (kWh)
           - entity: sensor.datakom_device_zagalna_reaktivna_energiia_ind
             name: Reactive Energy (kVArh)
-    visible:
-      - user: 4d3d8a5423b94e7181bc2df0955f44e7
   - title: Діагностика
     icon: mdi:stethoscope
     cards:
@@ -526,8 +521,6 @@ views:
             - 🔴 {{ alarm }}
               {% endfor %}
             {% else %} Нет активных алармов {% endif %}
-    visible:
-      - user: 4d3d8a5423b94e7181bc2df0955f44e7
   - title: Всі параметри
     icon: mdi:information
     cards:
