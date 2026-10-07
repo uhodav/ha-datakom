@@ -153,18 +153,20 @@ class DatakomHealthBinarySensor(CoordinatorEntity, BinarySensorEntity):
 # LED режима -> значение параметра 103 (Genset Mode, Modbus 10605 Unit mode)
 GENSET_MODE_LEDS = {"stop": 1, "manual": 2, "auto": 4, "test": 8}
 
-# LED панели из параметра 112 (байты 112-119 пакета, 2 бита на LED: 00 off, 01 on, 10/11 мигает).
-# Как на портале Datakom, LED включён только при 01; 10/11 - в атрибуте blink.
-# LED -> (байт, позиция). LED контактора сети не найден (на панели не загорался).
+# LED панели из параметра 117 (байты 117-124 пакета) с номерами битов как в портале Datakom
+# (DK_datakom.js, DK_bit_obtain(leds, бит, 2)). 2 бита на LED: 0 - выкл, 1 - жёлтый, 2 - зелёный.
+# На D500 RUN использует бит MAN.
 PANEL_LEDS = {
-    "auto_ready": (118, 2),
-    "mains": (113, 1),
-    "gcb": (117, 0),
-    "genset": (118, 3),
-    "test": (119, 0),
-    "manual": (119, 1),
-    "auto": (119, 2),
-    "stop": (119, 3),
+    "gcb": 0,
+    "mcb": 2,
+    "auto_ready": 12,
+    "genset": 14,
+    "test": 16,
+    "manual": 18,
+    "run": 18,
+    "auto": 20,
+    "stop": 22,
+    "mains": 24,
 }
 
 
@@ -184,7 +186,7 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
             self._attr_translation_key = led_key
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._state = None
-        self._blink = False
+        self._led_value = None
 
     @property
     def device_info(self):
@@ -216,7 +218,7 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "device_name": self._device_name,
             "led_name": self._led_name,
             "raw_value": self._state,
-            "blink": self._blink,
+            "led_value": self._led_value,
             "description": f"LED indicator status for {self._led_name}",
         }
     
@@ -235,12 +237,11 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
         data = self.coordinator.data or {}
         if data.get("params"):
             params = {pid: p.get("value") for pid, p in data["params"].items()}
-            leds = params.get("112")
+            leds = params.get("117")
             if self._led_name in PANEL_LEDS and isinstance(leds, str) and len(leds) == 16:
-                byte, pos = PANEL_LEDS[self._led_name]
-                bits = int(leds[(byte - 112) * 2:(byte - 112) * 2 + 2], 16) >> (pos * 2) & 0b11
-                self._state = 1 if bits == 0b01 else 0
-                self._blink = bits >= 2
+                bit = PANEL_LEDS[self._led_name]
+                self._led_value = int(leds[bit // 8 * 2:bit // 8 * 2 + 2], 16) >> (bit % 8) & 0b11
+                self._state = 1 if self._led_value else 0
                 return
 
             # ID параметров (из примера API):

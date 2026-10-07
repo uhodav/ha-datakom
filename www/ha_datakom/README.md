@@ -175,7 +175,11 @@ gcb: binary_sensor.datakom_device_gcb
 genset: binary_sensor.datakom_device_genset
 mains_color: '#27ae60'       # цвет LED сети (необязательно)
 genset_color: '#f1c40f'      # цвет LED генератора (необязательно)
+style: modern                # modern (векторная схема) или classic (картинки портала Datakom)
+image_path: /local/community/ha_datakom/img/   # путь к картинкам для style: classic
 ```
+
+`style: classic` повторяет схему портала Datakom: кнопки MAINS / GENSET с LED (цвет по атрибуту `led_value`: 1 — жёлтый, 2 — зелёный) и картинка контакторов `MainsOn|Off_GenOn|Off.png` по `mcb` / `gcb`.
 
 - LED над MAINS / GENSET горят, когда сеть / генератор доступны
 - Нож контактора замкнут по `mcb` / `gcb`
@@ -205,7 +209,7 @@ genset_color: '#f1c40f'      # цвет LED генератора (необяза
 - `gcb` - LED и положение контактора генератора (жёлтый)
 - `genset` - LED «генератор доступен» (жёлтый)
 
-Состояния берутся из светодиодов панели (параметр API 112), мигание LED передаётся атрибутом `blink` и отображается на карточке.
+Состояния берутся из светодиодов панели (параметр API 117), как на портале Datakom.
 Старый параметр `side_indicators` (MAINS / GENSET) поддерживается: его сущности используются для `mains` и `genset`, если `mimic` не задан.
 
 ### control_buttons (массив)

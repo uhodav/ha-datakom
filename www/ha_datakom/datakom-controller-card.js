@@ -798,6 +798,8 @@ class DatakomMimicCard extends HTMLElement {
       genset: 'binary_sensor.datakom_device_genset',
       mains_color: '#27ae60',
       genset_color: '#f1c40f',
+      style: 'modern',
+      image_path: '/local/community/ha_datakom/img/',
       ...(config || {}),
     };
     this.render();
@@ -836,8 +838,62 @@ class DatakomMimicCard extends HTMLElement {
     `;
   }
 
+  // Вид как на портале Datakom: картинки контакторов и кнопок MAINS / GENSET с LED (канва 352x70)
+  renderClassic() {
+    const img = this.config.image_path;
+    const pct = (v, total) => `${(v / total) * 100}%`;
+    this.shadowRoot.innerHTML = `
+      <style>
+        ha-card { padding: 16px; }
+        .title { font-size: 16px; font-weight: 500; margin-bottom: 8px; color: var(--primary-text-color); }
+        .classic {
+          position: relative;
+          width: 100%;
+          max-width: 528px;
+          aspect-ratio: 352 / 70;
+          margin: 0 auto;
+          background: #fff;
+          border-radius: 8px;
+        }
+        .classic img { position: absolute; top: 0; }
+        .classic .led {
+          position: absolute;
+          width: ${pct(10, 352)};
+          aspect-ratio: 1;
+          border-radius: 50%;
+          background: #C0C0C0;
+        }
+      </style>
+      <ha-card>
+        ${this.config.title ? `<div class="title">${this.config.title}</div>` : ''}
+        <div class="classic">
+          <img src="${img}BTN_MainsLedOff.png" style="left: 0; width: ${pct(48, 352)};">
+          <div class="led" id="mains-led" style="left: ${pct(35, 352)}; top: ${pct(3, 70)};"></div>
+          <img id="mimic-img" src="${img}MainsOff_GenOff.png" style="left: ${pct(112, 352)}; width: ${pct(128, 352)};">
+          <img src="${img}BTN_GenLedOff.png" style="left: ${pct(304, 352)}; width: ${pct(48, 352)};">
+          <div class="led" id="genset-led" style="left: ${pct(339, 352)}; top: ${pct(3, 70)};"></div>
+        </div>
+      </ha-card>
+    `;
+    this.updateStates();
+  }
+
+  // Цвет LED как на портале: значение 1 - жёлтый, 2 - зелёный (атрибут led_value)
+  classicLedColor(entity, fallback) {
+    const stateObj = entity && this._hass && this._hass.states[entity];
+    if (!stateObj || stateObj.state !== 'on') return '#C0C0C0';
+    const value = stateObj.attributes.led_value;
+    if (value === 1) return '#FFF500';
+    if (value === 2) return '#54C247';
+    return fallback;
+  }
+
   render() {
     if (!this.config) return;
+    if (this.config.style === 'classic') {
+      this.renderClassic();
+      return;
+    }
     this.shadowRoot.innerHTML = `
       <style>
         ha-card {
@@ -993,8 +1049,19 @@ class DatakomMimicCard extends HTMLElement {
   }
 
   updateStates() {
-    if (!this._hass || !this.shadowRoot.querySelector('.mimic')) return;
+    if (!this._hass) return;
     const root = this.shadowRoot;
+    if (this.config.style === 'classic') {
+      const mimicImg = root.getElementById('mimic-img');
+      if (!mimicImg) return;
+      const mcbOn = this.isOn(this.config.mcb);
+      const gcbOn = this.isOn(this.config.gcb);
+      mimicImg.src = `${this.config.image_path}Mains${mcbOn ? 'On' : 'Off'}_Gen${gcbOn ? 'On' : 'Off'}.png`;
+      root.getElementById('mains-led').style.background = this.classicLedColor(this.config.mains, '#54C247');
+      root.getElementById('genset-led').style.background = this.classicLedColor(this.config.genset, '#FFF500');
+      return;
+    }
+    if (!root.querySelector('.mimic')) return;
     const mains = this.isOn(this.config.mains);
     const mcb = this.isOn(this.config.mcb);
     const gcb = this.isOn(this.config.gcb);
@@ -1038,7 +1105,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.2.0 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.3.0 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );
