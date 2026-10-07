@@ -785,10 +785,12 @@ class DatakomControllerCard extends HTMLElement {
   }
 }
 
-customElements.define('datakom-controller-card', DatakomControllerCard);
+if (!customElements.get('datakom-controller-card')) {
+  customElements.define('datakom-controller-card', DatakomControllerCard);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
+if (!window.customCards.some(card => card.type === 'datakom-controller-card')) window.customCards.push({
   type: 'datakom-controller-card',
   name: 'Datakom Controller Card',
   description: 'Custom card for Datakom generator controller interface',
@@ -1115,9 +1117,11 @@ class DatakomMimicCard extends HTMLElement {
   }
 }
 
-customElements.define('datakom-mimic-card', DatakomMimicCard);
+if (!customElements.get('datakom-mimic-card')) {
+  customElements.define('datakom-mimic-card', DatakomMimicCard);
+}
 
-window.customCards.push({
+if (!window.customCards.some(card => card.type === 'datakom-mimic-card')) window.customCards.push({
   type: 'datakom-mimic-card',
   name: 'Datakom Mimic Card',
   description: 'Mains / genset mimic diagram (MCB, GCB, load)',
@@ -1126,7 +1130,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.4.0 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.4.1 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );

@@ -586,4 +586,6 @@ class DatakomControllerCardEditor extends HTMLElement {
   }
 }
 
-customElements.define('datakom-controller-card-editor', DatakomControllerCardEditor);
+if (!customElements.get('datakom-controller-card-editor')) {
+  customElements.define('datakom-controller-card-editor', DatakomControllerCardEditor);
+}
