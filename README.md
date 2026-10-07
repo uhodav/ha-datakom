@@ -112,7 +112,7 @@ Parameters from the API are automatically converted to sensors:
 - **`binary_sensor.alarm_warning`** - Warning alarms
 - **`binary_sensor.alarm_loaddump`** - LoadDump alarms
 
-**Note**: LED indicators are taken from the controller panel LED block (API parameter 112), so they match the physical panel; the `blink` attribute is `true` while the LED is flashing. With an older API server without parameter 112 they are calculated from the genset mode and state.
+**Note**: LED indicators are taken from the controller panel LED block (API parameter 112), so they match the panel as shown on the Datakom portal: a LED is `on` only when lit steadily; a flashing LED (e.g. MAINS while mains is out of limits) is `off` with the `blink` attribute `true`. With an older API server without parameter 112 they are calculated from the genset mode and state.
 
 ### Buttons
 - **`button.datakom_device_refresh`** - Refresh data now (without waiting for the update interval)
@@ -468,7 +468,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **`binary_sensor.alarm_warning`** - Попереджувальні аварії
 - **`binary_sensor.alarm_loaddump`** - Аварії скидання навантаження
 
-**Примітка**: Індикатори LED беруться з блоку світлодіодів панелі контролера (параметр API 112), тому збігаються з фізичною панеллю; атрибут `blink` = `true`, поки LED блимає. Зі старим API-сервером без параметра 112 вони розраховуються з режиму та стану генератора.
+**Примітка**: Індикатори LED беруться з блоку світлодіодів панелі контролера (параметр API 112), тому збігаються з панеллю на порталі Datakom: LED `on` лише коли світиться постійно; LED, що блимає (наприклад, MAINS, коли мережа поза межами), — `off` з атрибутом `blink` = `true`. Зі старим API-сервером без параметра 112 вони розраховуються з режиму та стану генератора.
 
 ### Кнопки
 - **`button.datakom_device_refresh`** - Оновити дані зараз (не чекаючи інтервалу оновлення)

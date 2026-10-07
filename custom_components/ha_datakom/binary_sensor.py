@@ -154,6 +154,7 @@ class DatakomHealthBinarySensor(CoordinatorEntity, BinarySensorEntity):
 GENSET_MODE_LEDS = {"stop": 1, "manual": 2, "auto": 4, "test": 8}
 
 # LED панели из параметра 112 (байты 112-119 пакета, 2 бита на LED: 00 off, 01 on, 10/11 мигает).
+# Как на портале Datakom, LED включён только при 01; 10/11 - в атрибуте blink.
 # LED -> (байт, позиция). LED контактора сети не найден (на панели не загорался).
 PANEL_LEDS = {
     "auto_ready": (118, 2),
@@ -238,7 +239,7 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
             if self._led_name in PANEL_LEDS and isinstance(leds, str) and len(leds) == 16:
                 byte, pos = PANEL_LEDS[self._led_name]
                 bits = int(leds[(byte - 112) * 2:(byte - 112) * 2 + 2], 16) >> (pos * 2) & 0b11
-                self._state = 1 if bits else 0
+                self._state = 1 if bits == 0b01 else 0
                 self._blink = bits >= 2
                 return
 
