@@ -996,7 +996,6 @@ class DatakomMimicCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           align-items: center;
-          margin-top: 18px;
         }
         .switch svg {
           width: 100%;
