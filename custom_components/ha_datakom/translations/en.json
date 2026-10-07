@@ -303,6 +303,15 @@
       },
       "gcb": {
         "name": "Genset Contactor"
+      },
+      "mains_fail": {
+        "name": "Mains Fail"
+      },
+      "prog1": {
+        "name": "Programmable LED 1"
+      },
+      "prog2": {
+        "name": "Programmable LED 2"
       }
     },
     "button": {

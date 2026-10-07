@@ -170,10 +170,12 @@ control_buttons:
 type: custom:datakom-mimic-card
 title: Мнемосхема            # необязательно
 mains: binary_sensor.datakom_device_mains
+mains_fail: binary_sensor.datakom_device_mains_fail   # красный LED сети при аварии
 mcb: binary_sensor.datakom_device_mcb
 gcb: binary_sensor.datakom_device_gcb
 genset: binary_sensor.datakom_device_genset
 mains_color: '#27ae60'       # цвет LED сети (необязательно)
+mains_fail_color: '#e74c3c'  # цвет LED сети при аварии (необязательно)
 genset_color: '#f1c40f'      # цвет LED генератора (необязательно)
 style: modern                # modern (векторная схема) или classic (картинки портала Datakom)
 image_path: /local/community/ha_datakom/img/   # путь к картинкам для style: classic
@@ -205,6 +207,7 @@ image_path: /local/community/ha_datakom/img/   # путь к картинкам 
 ### mimic (объект)
 Мнемосхема справа, как на панели D500: MAINS → контактор сети → LOAD ← контактор генератора ← GENSET:
 - `mains` - LED «сеть доступна» (зелёный)
+- `mains_fail` - тот же LED красным при аварии сети
 - `mcb` - LED и положение контактора сети (зелёный)
 - `gcb` - LED и положение контактора генератора (жёлтый)
 - `genset` - LED «генератор доступен» (жёлтый)

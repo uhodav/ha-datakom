@@ -158,6 +158,12 @@ views:
           - label: SERVICE REQUEST
             color: red
             entity: ''
+          - label: LED 1
+            color: red
+            entity: binary_sensor.datakom_device_prog1
+          - label: LED 2
+            color: red
+            entity: binary_sensor.datakom_device_prog2
         display_title: ''
         display_values:
           - label: Паливо
@@ -168,6 +174,7 @@ views:
             entity: sensor.datakom_device_godin_do_obslug_1
         mimic:
           mains: binary_sensor.datakom_device_mains
+          mains_fail: binary_sensor.datakom_device_mains_fail
           mcb: binary_sensor.datakom_device_mcb
           gcb: binary_sensor.datakom_device_gcb
           genset: binary_sensor.datakom_device_genset

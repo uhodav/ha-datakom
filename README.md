@@ -105,6 +105,8 @@ Parameters from the API are automatically converted to sensors:
 - **`binary_sensor.genset`** - GENSET AVAILABLE LED of the panel
 - **`binary_sensor.auto_ready`** - AUTO READY LED of the panel
 - **`binary_sensor.mcb`**, **`binary_sensor.gcb`** - Mains / genset contactor LEDs of the panel
+- **`binary_sensor.mains_fail`** - MAINS LED lit red (mains failure; the MAINS LED is two-color)
+- **`binary_sensor.prog1`**, **`binary_sensor.prog2`** - Programmable LEDs of the panel (function assigned in the controller settings)
 - **`binary_sensor.auto`** - Auto mode LED (calculated: on when mode is AUTO)
 - **`binary_sensor.manual`** - Manual mode LED (calculated: on when mode is MANUAL)
 - **`binary_sensor.alarm`** - Alarm LED (calculated: on when any alarm is active)
@@ -461,6 +463,8 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **`binary_sensor.genset`** - LED панелі «генератор доступний» (GENSET AVAILABLE)
 - **`binary_sensor.auto_ready`** - LED панелі AUTO READY
 - **`binary_sensor.mcb`**, **`binary_sensor.gcb`** - LED контакторів мережі / генератора
+- **`binary_sensor.mains_fail`** - LED MAINS світиться червоним (аварія мережі; LED MAINS двоколірний)
+- **`binary_sensor.prog1`**, **`binary_sensor.prog2`** - Програмовані LED панелі (функція призначається в налаштуваннях контролера)
 - **`binary_sensor.auto`** - LED автоматичного режиму (розраховується: увімкнено в режимі AUTO)
 - **`binary_sensor.manual`** - LED ручного режиму (розраховується: увімкнено в режимі MANUAL)
 - **`binary_sensor.alarm`** - LED аварії (розраховується: увімкнено при наявності активних аварій)

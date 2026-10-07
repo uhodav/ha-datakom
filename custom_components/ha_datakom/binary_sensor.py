@@ -37,7 +37,7 @@ async def async_setup_entry(
     
     # Создаём вычисляемые LED binary sensors
     # Endpoint /dump_devm_leds больше не существует, LED вычисляются из параметров
-    led_types = ["mains", "genset", "auto", "manual", "test", "run", "stop", "alarm", "auto_ready", "mcb", "gcb"]
+    led_types = ["mains", "genset", "auto", "manual", "test", "run", "stop", "alarm", "auto_ready", "mcb", "gcb", "mains_fail", "prog1", "prog2"]
     for led_type in led_types:
         led_sensor = DatakomLedBinarySensor(coordinator, led_type, device_name)
         sensors.append(led_sensor)
@@ -167,6 +167,9 @@ PANEL_LEDS = {
     "auto": 20,
     "stop": 22,
     "mains": 24,
+    "mains_fail": 26,
+    "prog1": 28,
+    "prog2": 30,
 }
 
 
@@ -182,7 +185,7 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_unique_id = f"datakom_led_{led_name.lower()}"
         # Устанавливаем translation_key для известных LED
         led_key = led_name.lower().replace(" ", "_").replace("-", "_")
-        if led_key in ["mains", "genset", "auto", "manual", "run", "stop", "test", "auto_ready", "mcb", "gcb"]:
+        if led_key in ["mains", "genset", "auto", "manual", "run", "stop", "test", "auto_ready", "mcb", "gcb", "mains_fail", "prog1", "prog2"]:
             self._attr_translation_key = led_key
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._state = None

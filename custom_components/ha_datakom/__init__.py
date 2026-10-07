@@ -49,7 +49,8 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
             "datakom_led_mains", "datakom_led_genset", "datakom_led_auto", "datakom_led_manual", 
             "datakom_led_test", "datakom_led_run", "datakom_led_stop", "datakom_led_alarm",
             "datakom_alarm_shutdown", "datakom_alarm_loaddump", "datakom_alarm_warning",
-            "datakom_led_auto_ready", "datakom_led_mcb", "datakom_led_gcb"
+            "datakom_led_auto_ready", "datakom_led_mcb", "datakom_led_gcb",
+            "datakom_led_mains_fail", "datakom_led_prog1", "datakom_led_prog2"
         }
         valid_sensor_ids = {"datakom_data_age"}
         valid_button_ids = {"datakom_refresh"}

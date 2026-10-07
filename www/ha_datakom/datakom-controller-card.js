@@ -236,6 +236,10 @@ class DatakomControllerCard extends HTMLElement {
         .side-led.green.on { background: #27ae60; }
         .side-led.red.on { background: #e74c3c; }
         .side-led.yellow.on { background: #f39c12; }
+        .side-led.fail {
+          background: #e74c3c;
+          box-shadow: 0 0 12px #e74c3c, inset 0 0 6px #e74c3c;
+        }
 
         .led.blink, .side-led.blink, .button-indicator.blink {
           animation: led-blink 0.8s steps(1) infinite;
@@ -497,7 +501,7 @@ class DatakomControllerCard extends HTMLElement {
     const m = this.getMimicEntities();
     return `
       <div class="mimic">
-        <div class="side-led green" data-entity="${m.mains}"></div>
+        <div class="side-led green" data-entity="${m.mains}" data-fail-entity="${m.mains_fail}"></div>
         <ha-icon icon="mdi:transmission-tower"></ha-icon>
         <span class="mimic-label">MAINS</span>
         <div class="side-led green" data-entity="${m.mcb}"></div>
@@ -523,6 +527,7 @@ class DatakomControllerCard extends HTMLElement {
     const mimic = this.config.mimic || {};
     return {
       mains: mimic.mains || legacy.mains || 'binary_sensor.datakom_device_mains',
+      mains_fail: mimic.mains_fail || 'binary_sensor.datakom_device_mains_fail',
       mcb: mimic.mcb || 'binary_sensor.datakom_device_mcb',
       gcb: mimic.gcb || 'binary_sensor.datakom_device_gcb',
       genset: mimic.genset || legacy.genset || 'binary_sensor.datakom_device_genset',
@@ -647,6 +652,11 @@ class DatakomControllerCard extends HTMLElement {
         led.classList.toggle('on', state.on);
         led.classList.toggle('blink', state.blink);
       }
+      // MAINS - двухцветный LED: красный при аварии сети
+      const failEntity = led.getAttribute('data-fail-entity');
+      if (failEntity) {
+        led.classList.toggle('fail', !state.on && this.ledState(failEntity).on);
+      }
     });
 
     // Update mimic contactors
@@ -699,7 +709,9 @@ class DatakomControllerCard extends HTMLElement {
         { label: 'AUTO READY', color: 'green', entity: 'binary_sensor.datakom_device_auto_ready' },
         { label: 'ALARM', color: 'red', entity: ['binary_sensor.datakom_device_alarm_shutdown', 'binary_sensor.datakom_device_alarm_loaddump'] },
         { label: 'WARNING', color: 'red', entity: 'binary_sensor.datakom_device_alarm_warning' },
-        { label: 'SERVICE REQUEST', color: 'red', entity: '' }
+        { label: 'SERVICE REQUEST', color: 'red', entity: '' },
+        { label: 'LED 1', color: 'red', entity: 'binary_sensor.datakom_device_prog1' },
+        { label: 'LED 2', color: 'red', entity: 'binary_sensor.datakom_device_prog2' }
       ],
       display_values: [
         { label: 'Fuel', entity: 'sensor.engine_fuel_level' },
@@ -708,6 +720,7 @@ class DatakomControllerCard extends HTMLElement {
       ],
       mimic: {
         mains: 'binary_sensor.datakom_device_mains',
+        mains_fail: 'binary_sensor.datakom_device_mains_fail',
         mcb: 'binary_sensor.datakom_device_mcb',
         gcb: 'binary_sensor.datakom_device_gcb',
         genset: 'binary_sensor.datakom_device_genset'
@@ -793,10 +806,12 @@ class DatakomMimicCard extends HTMLElement {
   setConfig(config) {
     this.config = {
       mains: 'binary_sensor.datakom_device_mains',
+      mains_fail: 'binary_sensor.datakom_device_mains_fail',
       mcb: 'binary_sensor.datakom_device_mcb',
       gcb: 'binary_sensor.datakom_device_gcb',
       genset: 'binary_sensor.datakom_device_genset',
       mains_color: '#27ae60',
+      mains_fail_color: '#e74c3c',
       genset_color: '#f1c40f',
       style: 'modern',
       image_path: '/local/community/ha_datakom/img/',
@@ -1057,7 +1072,9 @@ class DatakomMimicCard extends HTMLElement {
       const mcbOn = this.isOn(this.config.mcb);
       const gcbOn = this.isOn(this.config.gcb);
       mimicImg.src = `${this.config.image_path}Mains${mcbOn ? 'On' : 'Off'}_Gen${gcbOn ? 'On' : 'Off'}.png`;
-      root.getElementById('mains-led').style.background = this.classicLedColor(this.config.mains, '#54C247');
+      const mainsColor = this.classicLedColor(this.config.mains, '#54C247');
+      root.getElementById('mains-led').style.background =
+        mainsColor === '#C0C0C0' && this.isOn(this.config.mains_fail) ? this.config.mains_fail_color : mainsColor;
       root.getElementById('genset-led').style.background = this.classicLedColor(this.config.genset, '#FFF500');
       return;
     }
@@ -1074,7 +1091,11 @@ class DatakomMimicCard extends HTMLElement {
       led.style.background = on ? color : '';
       led.style.boxShadow = on ? `0 0 10px ${color}` : '';
     };
-    setLed('mains-led', mains, this.config.mains_color);
+    if (!mains && this.isOn(this.config.mains_fail)) {
+      setLed('mains-led', true, this.config.mains_fail_color);
+    } else {
+      setLed('mains-led', mains, this.config.mains_color);
+    }
     setLed('genset-led', genset, this.config.genset_color);
 
     root.getElementById('mains-node').classList.toggle('on', mains);
@@ -1105,7 +1126,7 @@ window.customCards.push({
 });
 
 console.info(
-  '%c DATAKOM-CONTROLLER-CARD %c v1.3.0 ',
+  '%c DATAKOM-CONTROLLER-CARD %c v1.4.0 ',
   'color: white; background: #e74c3c; font-weight: 700;',
   'color: #e74c3c; background: white; font-weight: 700;'
 );
