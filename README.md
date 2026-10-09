@@ -46,9 +46,9 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 5. Follow the configuration steps
 6. Refresh your browser (Ctrl+F5)
 
-The Lovelace cards are shipped with the integration and loaded automatically (served from `/ha_datakom/`), so there is nothing to copy and no Lovelace resource to add; they are updated together with the integration.
+The Lovelace cards are shipped with the integration and set up automatically, so there is nothing to copy and no Lovelace resource to add by hand; they are updated together with the integration. On start the integration copies the cards to `config/www/ha_datakom/` and keeps the dashboard resources `/local/ha_datakom/…?v=<version>` up to date, so the cards are available right after a Home Assistant restart, before the integration itself has loaded (otherwise a dashboard opened during startup shows "Custom element doesn't exist"). Dashboards in YAML mode get the cards from `/ha_datakom/` instead.
 
-**Upgrading from versions before 2.6.0**: remove the old resources `/local/ha_datakom/datakom-controller-card.js` and `/local/ha_datakom/datakom-controller-card-editor.js` in **Settings → Dashboards → Resources** and delete the `config/www/ha_datakom` folder; change image paths in your card config from `/local/community/ha_datakom/img/` to `/ha_datakom/img/`.
+**Upgrading from versions before 2.6.0**: remove the old resources `/local/community/ha_datakom/…` in **Settings → Dashboards → Resources**; change image paths in your card config from `/local/community/ha_datakom/img/` to `/ha_datakom/img/`. Resources `/local/ha_datakom/…` are managed by the integration, leave them.
 
 ## Configuration
 
@@ -137,7 +137,7 @@ Panel indicators of the controller, as on its front panel (`binary_sensor.datako
 The integration includes a custom Datakom Controller Card that mimics the original D500 panel interface.
 
 ### Installation
-The cards (`datakom-controller-card`, `datakom-mimic-card`) are loaded automatically by the integration, no resources needed. Images are available at `/ha_datakom/img/`.
+The cards (`datakom-controller-card`, `datakom-mimic-card`) are set up automatically by the integration, no resources to add by hand. Images are available at `/ha_datakom/img/`.
 
 ### Usage
 ```yaml
@@ -413,9 +413,9 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 5. Слідуйте крокам налаштування
 6. Оновіть браузер (Ctrl+F5)
 
-Картки Lovelace постачаються разом з інтеграцією і підключаються автоматично (з адреси `/ha_datakom/`): нічого копіювати й додавати ресурси не потрібно, вони оновлюються разом з інтеграцією.
+Картки Lovelace постачаються разом з інтеграцією і підключаються автоматично: нічого копіювати й додавати ресурси вручну не потрібно, вони оновлюються разом з інтеграцією. Під час запуску інтеграція копіює картки в `config/www/ha_datakom/` і підтримує ресурси панелей `/local/ha_datakom/…?v=<версія>`, тож картки доступні одразу після перезапуску Home Assistant, ще до завантаження самої інтеграції (інакше панель, відкрита під час старту, показує «Custom element doesn't exist»). Панелі в YAML-режимі отримують картки з адреси `/ha_datakom/`.
 
-**Оновлення з версій до 2.6.0**: видаліть старі ресурси `/local/ha_datakom/datakom-controller-card.js` і `/local/ha_datakom/datakom-controller-card-editor.js` у **Налаштування → Панелі → Ресурси** та папку `config/www/ha_datakom`; у налаштуваннях картки замініть шлях до зображень `/local/community/ha_datakom/img/` на `/ha_datakom/img/`.
+**Оновлення з версій до 2.6.0**: видаліть старі ресурси `/local/community/ha_datakom/…` у **Налаштування → Панелі → Ресурси**; у налаштуваннях картки замініть шлях до зображень `/local/community/ha_datakom/img/` на `/ha_datakom/img/`. Ресурси `/local/ha_datakom/…` керуються інтеграцією, їх не чіпайте.
 
 ## Налаштування
 

@@ -1,11 +1,11 @@
 import logging
 from pathlib import Path
-from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.loader import async_get_integration
 
+from .card_loader import async_register_cards
 from .coordinator import DEFAULT_SCAN_INTERVAL, DatakomCoordinator
 
 DOMAIN = "ha_datakom"
@@ -26,8 +26,8 @@ FUEL_DEFAULTS = {
     "fuel_reserve": 30,
 }
 
-# Карточки Lovelace поставляются с интеграцией: файлы из frontend/ отдаются по этому адресу
-# и подключаются во фронтенд автоматически, копировать их и добавлять ресурс не нужно
+# Карточки Lovelace поставляются с интеграцией: файлы из frontend/ отдаются по этому адресу (там же картинки),
+# а сами карточки копируются в www/ha_datakom и подключаются ресурсом панелей автоматически (см. card_loader)
 FRONTEND_URL = "/ha_datakom"
 FRONTEND_SCRIPTS = ["datakom-controller-card.js", "datakom-controller-card-editor.js"]
 
@@ -47,8 +47,7 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
 
     # Версия в адресе - чтобы после обновления браузер не брал старый файл из кэша
     version = (await async_get_integration(hass, DOMAIN)).version
-    for script in FRONTEND_SCRIPTS:
-        add_extra_js_url(hass, f"{FRONTEND_URL}/{script}?v={version}")
+    await async_register_cards(hass, DOMAIN, Path(path), FRONTEND_SCRIPTS, FRONTEND_URL, str(version))
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

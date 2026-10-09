@@ -7,10 +7,11 @@
   "config_flow": true,
   "dependencies": [
     "frontend",
-    "http"
+    "http",
+    "lovelace"
   ],
   "documentation": "https://github.com/uhodav/ha-datakom",
   "requirements": [],
-  "version": "2.9.0",
+  "version": "2.9.1",
   "iot_class": "cloud_polling"
 }
