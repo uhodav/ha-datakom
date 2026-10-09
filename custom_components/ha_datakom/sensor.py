@@ -5,11 +5,13 @@ from datetime import timedelta, datetime
 from zoneinfo import ZoneInfo
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorEntity,
     SensorEntityDescription,
     SensorDeviceClass,
     SensorStateClass,
 )
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -184,13 +186,17 @@ UNIT_MAP = {
     "Ah": ("Ah", None, SensorStateClass.TOTAL_INCREASING),
 }
 
+# Единица HA -> единица API (для восстановления сохранённого состояния)
+API_UNIT_BY_HA_UNIT = {}
+for _api_unit, (_ha_unit, _, _) in UNIT_MAP.items():
+    API_UNIT_BY_HA_UNIT.setdefault(_ha_unit, _api_unit)
+
 # Счетчики (запуски, прокрутки, моточасы, расход топлива)
 TOTAL_INCREASING_IDS = {"503", "507", "511", "577", "598", "608"}
 
 # Параметры API для расчёта топлива
 PARAM_GENSET_STATE = "105"
 PARAM_GENSET_KVA = "225"  # Загальна повна потужність генератора
-PARAM_MAINS_KVA = "169"   # Загальна повна потужність мережі
 PARAM_FUEL_LITERS = "585"  # Статус палива (остаток, л)
 
 
@@ -235,6 +241,13 @@ async def async_setup_entry(
         except Exception as e:
             _LOGGER.error(f"Datakom: param_names request error: {e}")
     
+    # API недоступен - берём названия, под которыми сенсоры уже зарегистрированы
+    if not param_labels:
+        registry = er.async_get(hass)
+        for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+            if reg_entry.domain == "sensor" and reg_entry.original_name:
+                param_labels[reg_entry.unique_id.removeprefix("datakom_")] = reg_entry.original_name
+
     # Создаём сенсоры только для выбранных параметров
     _LOGGER.debug(f"Datakom: Creating sensors for param_ids: {param_ids}")
     for pid in param_ids:
@@ -255,7 +268,7 @@ async def async_setup_entry(
 
 
 
-class DatakomParamSensor(CoordinatorEntity, SensorEntity):
+class DatakomParamSensor(CoordinatorEntity, RestoreSensor):
     """Сенсор для одного выбранного параметра Datakom."""
 
     def __init__(self, coordinator, param_id, label, device_name):
@@ -373,9 +386,8 @@ class DatakomParamSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        # Устаревшие данные (контроллер не на связи) показываем как недоступные
-        data = self.coordinator.data or {}
-        return super().available and not data.get("stale", False)
+        # Нет связи или данные устарели - показываем последние актуальные значения
+        return True
 
     @property
     def native_value(self):
@@ -439,6 +451,8 @@ class DatakomParamSensor(CoordinatorEntity, SensorEntity):
         for p in result:
             if str(p["id"]) == str(self._param_id):
                 value = p.get("value")
+                if value is None:
+                    break  # оставляем последнее значение
                 self._unit = p.get("unit", "")
                                 
                 # Сохраняем оригинальный английский label если доступен
@@ -473,6 +487,13 @@ class DatakomParamSensor(CoordinatorEntity, SensorEntity):
         await super().async_added_to_hass()
         self._hass = self.hass
         self._update_from_coordinator()
+        if self._state is None:
+            # Данных от API ещё нет - восстанавливаем последнее значение
+            last = await self.async_get_last_sensor_data()
+            if last is not None and last.native_value is not None:
+                self._state = last.native_value
+                ha_unit = last.native_unit_of_measurement
+                self._unit = API_UNIT_BY_HA_UNIT.get(ha_unit, ha_unit)
 
 
 class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
@@ -490,6 +511,10 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = "s"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_icon = "mdi:timer-sand"
+
+    @property
+    def available(self) -> bool:
+        return True
 
     @property
     def device_info(self):
@@ -510,7 +535,7 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
         return {"stale": data.get("stale"), "telemetry_timestamp": data.get("timestamp")}
 
 
-class DatakomFuelSensor(CoordinatorEntity, SensorEntity):
+class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
     """База расчётных сенсоров топлива (эмпирическая модель расхода от нагрузки)."""
 
     def __init__(self, coordinator, device_name, fuel_model):
@@ -532,8 +557,7 @@ class DatakomFuelSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        data = self.coordinator.data or {}
-        return super().available and not data.get("stale", False)
+        return True
 
     def _param(self, param_id: str):
         """Числовое значение параметра или None."""
@@ -554,6 +578,30 @@ class DatakomFuelSensor(CoordinatorEntity, SensorEntity):
         m = self._fuel_model
         return max(m["fuel_idle_rate"], m["fuel_slope"] * load_kva - m["fuel_offset"])
 
+    def _update(self) -> None:
+        raise NotImplementedError
+
+    def _update_if_data(self) -> None:
+        # Без данных от API оставляем последнее значение
+        if (self.coordinator.data or {}).get("params"):
+            self._update()
+
+    def _handle_coordinator_update(self) -> None:
+        self._update_if_data()
+        super()._handle_coordinator_update()
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        last = await self.async_get_last_sensor_data()
+        if last is not None:
+            self._attr_native_value = last.native_value
+        last_state = await self.async_get_last_state()
+        if last_state is not None and self._attr_extra_state_attributes is not None:
+            self._attr_extra_state_attributes = {
+                key: last_state.attributes.get(key) for key in self._attr_extra_state_attributes
+            }
+        self._update_if_data()
+
 
 class DatakomFuelRateSensor(DatakomFuelSensor):
     """Текущий расход топлива по нагрузке генератора (0, когда двигатель не работает)."""
@@ -566,17 +614,17 @@ class DatakomFuelRateSensor(DatakomFuelSensor):
         self._attr_native_unit_of_measurement = "L/h"
         self._attr_icon = "mdi:fuel"
 
-    @property
-    def native_value(self):
+    def _update(self) -> None:
         if not self._engine_running():
-            return 0.0
-        return round(self._rate(self._param(PARAM_GENSET_KVA) or 0), 2)
+            self._attr_native_value = 0.0
+        else:
+            self._attr_native_value = round(self._rate(self._param(PARAM_GENSET_KVA) or 0), 2)
 
 
 class DatakomFuelTimeSensor(DatakomFuelSensor):
-    """На сколько часов хватит топлива (без резерва) при текущей нагрузке.
+    """На сколько часов хватит топлива (без резерва) при текущей нагрузке генератора.
 
-    Когда генератор не работает, нагрузку берём с сети - прогноз на случай отключения.
+    Считается только пока генератор работает; после остановки остаётся последнее значение.
     """
 
     def __init__(self, coordinator, device_name, fuel_model):
@@ -587,31 +635,20 @@ class DatakomFuelTimeSensor(DatakomFuelSensor):
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_native_unit_of_measurement = "h"
         self._attr_icon = "mdi:timer-sand"
+        self._attr_extra_state_attributes = dict.fromkeys(
+            ("fuel_liters", "reserve_liters", "load_kva", "fuel_rate_l_h")
+        )
 
-    def _load(self):
-        """(нагрузка кВА, источник)."""
-        if self._engine_running():
-            return self._param(PARAM_GENSET_KVA) or 0, "genset"
-        mains = self._param(PARAM_MAINS_KVA)
-        if mains is not None:
-            return mains, "mains"
-        return 0, "none"
-
-    @property
-    def native_value(self):
+    def _update(self) -> None:
         liters = self._param(PARAM_FUEL_LITERS)
-        if liters is None:
-            return None
-        load, _ = self._load()
-        return round(max(0, liters - self._fuel_model["fuel_reserve"]) / self._rate(load), 1)
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        load, source = self._load()
-        return {
-            "fuel_liters": self._param(PARAM_FUEL_LITERS),
+        if liters is None or not self._engine_running():
+            return
+        load = self._param(PARAM_GENSET_KVA) or 0
+        rate = self._rate(load)
+        self._attr_native_value = round(max(0, liters - self._fuel_model["fuel_reserve"]) / rate, 1)
+        self._attr_extra_state_attributes = {
+            "fuel_liters": liters,
             "reserve_liters": self._fuel_model["fuel_reserve"],
             "load_kva": load,
-            "load_source": source,
-            "fuel_rate_l_h": round(self._rate(load), 2),
+            "fuel_rate_l_h": round(rate, 2),
         }

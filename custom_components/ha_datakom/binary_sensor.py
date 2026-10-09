@@ -7,6 +7,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySen
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 
@@ -173,7 +174,7 @@ PANEL_LEDS = {
 }
 
 
-class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class DatakomLedBinarySensor(CoordinatorEntity, RestoreEntity, BinarySensorEntity):
     """Binary sensor для отображения состояния LED индикатора Datakom."""
 
     def __init__(self, coordinator, led_name, device_name):
@@ -274,8 +275,7 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
                 self._update_alarm_state()
             else:
                 self._state = 0
-        else:
-            self._state = None
+        # Нет данных от API - оставляем последнее состояние
 
     def _handle_coordinator_update(self) -> None:
         self._update_from_coordinator()
@@ -283,14 +283,19 @@ class DatakomLedBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None and last_state.state in ("on", "off"):
+            self._state = 1 if last_state.state == "on" else 0
+            self._led_value = last_state.attributes.get("led_value")
         self._update_from_coordinator()
 
     @property
     def available(self) -> bool:
-        return super().available and not (self.coordinator.data or {}).get("stale", False)
+        # Нет связи или данные устарели - показываем последнее состояние
+        return True
 
 
-class DatakomAlarmBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class DatakomAlarmBinarySensor(CoordinatorEntity, RestoreEntity, BinarySensorEntity):
     """Binary sensor для отображения состояния алармов Datakom."""
 
     def __init__(self, coordinator, alarm_type, device_name):
@@ -363,7 +368,9 @@ class DatakomAlarmBinarySensor(CoordinatorEntity, BinarySensorEntity):
         }
 
     def _update_from_coordinator(self) -> None:
-        alarm_data = (self.coordinator.data or {}).get("alarm") or {}
+        alarm_data = (self.coordinator.data or {}).get("alarm")
+        if alarm_data is None:
+            return  # нет данных от API - оставляем последний список
         alarms_list = alarm_data.get(self._alarm_type, [])
         # Новый формат: алармы - это объекты с полями slot, name, index
         if alarms_list and isinstance(alarms_list[0], dict):
@@ -378,9 +385,12 @@ class DatakomAlarmBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None and isinstance(last_state.attributes.get("alarms"), list):
+            self._alarms = list(last_state.attributes["alarms"])
         self._update_from_coordinator()
 
     @property
     def available(self) -> bool:
-        data = self.coordinator.data or {}
-        return super().available and not data.get("stale", False) and data.get("alarm") is not None
+        # Нет связи или данные устарели - показываем последнее состояние
+        return True

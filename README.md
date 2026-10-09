@@ -25,7 +25,7 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 
 - **Multi-language support**: English, Ukrainian, Russian translations
 - **ENUM sensors**: Genset Mode, Genset State, Engine State, Breaker State, Mains State, Battery State, Start Source, Running Type
-- **Single polling cycle**: one API request per update interval for all entities; entities become unavailable when the controller stops sending data
+- **Single polling cycle**: one API request per update interval for all entities; when the controller stops sending data or the API is unreachable, entities keep their last values (also after a Home Assistant restart)
 - **Statistics and Energy dashboard**: standard units and state classes (kWh counters can be added to the Energy dashboard)
 - **Binary sensors**: API connection status, LED indicators, alarm monitoring
 - **Control buttons**: Stop/Auto/Manual/Test (with a control key), Refresh
@@ -90,11 +90,11 @@ Parameters from the API are automatically converted to sensors:
 - **`sensor.running_type`** - Operational mode type
 
 ### Diagnostic Sensors
-- **Data age** - seconds since the controller sent the last telemetry. When the data is older than the API threshold (5 minutes by default), parameter sensors, LEDs and alarms become **unavailable** instead of showing old values, and `API Connection` turns off.
+- **Data age** - seconds since the controller sent the last telemetry. When the data is older than the API threshold (5 minutes by default) or the API is unreachable, parameter sensors, LEDs and alarms keep their **last values** (they never become unavailable), and `API Connection` turns off - use it to tell whether the values are current.
 
 ### Fuel Sensors (calculated)
 - **Fuel consumption (calculated)** (`L/h`) - current consumption from the genset load: `Q = max(2.5, 1.014 × P − 17.97)`, where `P` is the genset total apparent power (kVA). `0` when the engine is not running.
-- **Fuel time left** (`h`) - how long the fuel lasts at the current load: `T = max(0, L − 30) / Q`, where `L` is the fuel in the tank (`Fuel Status`, L) and 30 L is an unusable reserve. When the genset is stopped, the mains load is used as `P` (forecast for an outage). Attributes: `fuel_liters`, `reserve_liters`, `load_kva`, `load_source` (`genset`/`mains`), `fuel_rate_l_h`.
+- **Fuel time left** (`h`) - how long the fuel lasts at the current genset load: `T = max(0, L − 30) / Q`, where `L` is the fuel in the tank (`Fuel Status`, L) and 30 L is an unusable reserve. Calculated only while the genset is running; when it stops, the last value is kept. Attributes: `fuel_liters`, `reserve_liters`, `load_kva`, `fuel_rate_l_h`.
 
 The coefficients are an empirical fit for a specific generator - adjust them (and the reserve) in the integration options, step **Fuel consumption model**.
 
@@ -300,7 +300,7 @@ Go to **Settings → System → Logs** and search for `ha_datakom` entries.
 
 ### Common Issues
 - **Sensors not updating**: Check API URL and network connectivity
-- **Sensors unavailable**: The controller is not sending data — check `Data age` and the `API Connection` attributes
+- **Values do not change**: The controller is not sending data or the API is unreachable — sensors keep the last values; check `Data age` and the `API Connection` sensor and attributes
 - **Missing translations**: Ensure language is set in Home Assistant profile
 - **ENUM sensors showing numbers**: Verify translation files are loaded correctly
 
@@ -384,7 +384,7 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 - **Багатомовна підтримка**: переклади українською, англійською, російською
 - **ENUM сенсори**: Режим генератора, Стан генератора, Стан двигуна, Стан вимикача, Стан мережі, Стан батареї, Джерело запуску, Тип роботи
-- **Єдиний цикл опитування**: один запит до API за інтервал для всіх сутностей; сутності стають недоступними, коли контролер перестає надсилати дані
+- **Єдиний цикл опитування**: один запит до API за інтервал для всіх сутностей; коли контролер перестає надсилати дані або API недоступний, сутності зберігають останні значення (також після перезапуску Home Assistant)
 - **Статистика та панель Енергія**: стандартні одиниці та класи станів (лічильники кВт·год можна додати до панелі Енергія)
 - **Бінарні сенсори**: Стан API підключення, індикатори LED, моніторинг аварій
 - **Кнопки керування**: Стоп/Авто/Ручний/Тест (з ключем керування), Оновити
@@ -449,11 +449,11 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **`sensor.running_type`** - Тип операційного режиму
 
 ### Діагностичні сенсори
-- **Вік даних** - скільки секунд тому контролер надіслав останню телеметрію. Коли дані старші за поріг API (за замовчуванням 5 хвилин), сенсори параметрів, LED та аварії стають **недоступними** замість показу старих значень, а `API Connection` вимикається.
+- **Вік даних** - скільки секунд тому контролер надіслав останню телеметрію. Коли дані старші за поріг API (за замовчуванням 5 хвилин) або API недоступний, сенсори параметрів, LED та аварії зберігають **останні значення** (не стають недоступними), а `API Connection` вимикається - за ним видно, чи значення актуальні.
 
 ### Сенсори палива (розрахункові)
 - **Витрата палива (розрахункова)** (`л/год`) - поточна витрата за навантаженням генератора: `Q = max(2.5, 1.014 × P − 17.97)`, де `P` - загальна повна потужність генератора (кВА). `0`, коли двигун не працює.
-- **Палива вистачить на** (`год`) - на скільки вистачить палива при поточному навантаженні: `T = max(0, L − 30) / Q`, де `L` - паливо в баку (`Статус палива`, л), 30 л - резерв, що не використовується. Коли генератор не працює, як `P` береться навантаження мережі (прогноз на випадок відключення). Атрибути: `fuel_liters`, `reserve_liters`, `load_kva`, `load_source` (`genset`/`mains`), `fuel_rate_l_h`.
+- **Палива вистачить на** (`год`) - на скільки вистачить палива при поточному навантаженні генератора: `T = max(0, L − 30) / Q`, де `L` - паливо в баку (`Статус палива`, л), 30 л - резерв, що не використовується. Розраховується лише під час роботи генератора; після зупинки зберігається останнє значення. Атрибути: `fuel_liters`, `reserve_liters`, `load_kva`, `fuel_rate_l_h`.
 
 Коефіцієнти - емпірична апроксимація для конкретного генератора; змінити їх (і резерв) можна в опціях інтеграції, крок **Модель витрати палива**.
 
@@ -591,7 +591,7 @@ automation:
 
 ### Поширені проблеми
 - **Сенсори не оновлюються**: Перевірте URL API та підключення до мережі
-- **Сенсори недоступні**: Контролер не надсилає дані — перевірте `Вік даних` та атрибути `API Connection`
+- **Значення не змінюються**: Контролер не надсилає дані або API недоступний — сенсори зберігають останні значення; перевірте `Вік даних` та сенсор і атрибути `API Connection`
 - **Відсутні переклади**: Переконайтеся, що мова встановлена в профілі Home Assistant
 - **ENUM сенсори показують числа**: Перевірте, чи правильно завантажені файли перекладів
 

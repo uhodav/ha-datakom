@@ -377,7 +377,7 @@
       },
       "fuel": {
         "title": "Fuel consumption model",
-        "description": "Empirical model: consumption Q = max(idle rate, slope × P − offset) L/h, where P is the apparent power in kVA. Time left = (fuel − reserve) / Q; when the genset is stopped, the mains load is used (forecast for an outage).",
+        "description": "Empirical model: consumption Q = max(idle rate, slope × P − offset) L/h, where P is the apparent power in kVA. Time left = (fuel − reserve) / Q, calculated while the genset is running (the last value is kept after it stops).",
         "data": {
           "fuel_idle_rate": "Minimum (idle) consumption",
           "fuel_slope": "Slope",

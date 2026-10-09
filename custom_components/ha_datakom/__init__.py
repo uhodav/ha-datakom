@@ -57,7 +57,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         language=entry.data.get("language", "uk"),
         scan_interval=int(entry.data.get("scan_interval", DEFAULT_SCAN_INTERVAL)),
     )
-    await coordinator.async_config_entry_first_refresh()
+    # Без связи с API при старте интеграция всё равно загружается - сущности восстановят последние значения
+    await coordinator.async_refresh()
     
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator, "data": entry.data}

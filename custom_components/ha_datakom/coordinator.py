@@ -40,6 +40,17 @@ class DatakomCoordinator(DataUpdateCoordinator):
             return await resp.json(content_type=None)
 
     async def _async_update_data(self) -> dict:
+        try:
+            return await self._fetch()
+        except Exception as err:
+            # Нет первых данных - ошибка (сущности покажут восстановленные значения)
+            if self.data is None:
+                raise UpdateFailed(str(err)) from err
+            # Нет связи с API или ошибка: оставляем последние значения, помечаем их устаревшими
+            _LOGGER.warning(f"Datakom: update failed, keeping last data: {err}")
+            return {**self.data, "stale": True, "health": None}
+
+    async def _fetch(self) -> dict:
         dump, alarm, health = await asyncio.gather(
             self._get_json(f"dump_devm?language={self.language}"),
             self._get_json(f"dump_devm_alarm?language={self.language}"),
