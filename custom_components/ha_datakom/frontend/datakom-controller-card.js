@@ -89,8 +89,8 @@ class DatakomControllerCard extends HTMLElement {
         
         .main-layout {
           display: grid;
-          grid-template-columns: minmax(74px, auto) 1fr minmax(74px, auto);
-          gap: 10px;
+          grid-template-columns: minmax(50px, auto) 1fr minmax(50px, auto);
+          gap: 5px;
           margin-bottom: 20px;
         }
         
@@ -112,9 +112,9 @@ class DatakomControllerCard extends HTMLElement {
         .status-indicator {
           display: flex;
           align-items: center;
-          gap: 4px;
-          padding: 6px 10px;
-          background: rgba(255,255,255,0.05);
+          gap: 2px;
+          padding: 2px 7px;
+          background: rgba(255, 255, 255, 0.05);
           border-radius: 4px;
         }
         
@@ -254,7 +254,7 @@ class DatakomControllerCard extends HTMLElement {
           grid-template-columns: 14px 26px auto;
           grid-template-rows: auto 34px auto 34px auto;
           align-items: center;
-          column-gap: 6px;
+          column-gap: 1px;
           color: #ccc;
           font-size: 10px;
           text-transform: uppercase;
@@ -267,6 +267,7 @@ class DatakomControllerCard extends HTMLElement {
 
         .mimic-label {
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
           gap: 4px;
         }
