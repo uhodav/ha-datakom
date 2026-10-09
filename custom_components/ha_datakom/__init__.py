@@ -11,7 +11,11 @@ from .coordinator import DEFAULT_SCAN_INTERVAL, DatakomCoordinator
 DOMAIN = "ha_datakom"
 _LOGGER = logging.getLogger(__name__)
 
-__all__ = ["DOMAIN", "FUEL_DEFAULTS", "_cleanup_old_entities"]
+__all__ = ["DOMAIN", "FUEL_DEFAULTS", "FUEL_RATE_SOURCES", "_cleanup_old_entities"]
+
+# Источник расхода топлива: auto - датчик (витратомір/ECU), если показывает > 0, иначе модель;
+# model - только модель; flowmeter / ecu - только фактический расход с датчика
+FUEL_RATE_SOURCES = ["auto", "model", "flowmeter", "ecu"]
 
 # Эмпирическая модель расхода топлива: Q = max(idle_rate, slope * P - offset), л/ч (P - полная мощность, кВА).
 # reserve - неиспользуемый остаток топлива (л), не учитывается в расчёте времени работы

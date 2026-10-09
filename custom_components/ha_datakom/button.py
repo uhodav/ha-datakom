@@ -47,8 +47,8 @@ class DatakomRefreshButton(ButtonEntity):
     def __init__(self, coordinator, device_name):
         self._coordinator = coordinator
         self._device_name = device_name
+        self.entity_id = "button.datakom_device_refresh"
         self._attr_has_entity_name = True
-        self._attr_name = "Refresh"
         self._attr_unique_id = "datakom_refresh"
         self._attr_translation_key = "refresh"
         self._attr_entity_category = EntityCategory.CONFIG
@@ -87,7 +87,6 @@ class DatakomControlButton(ButtonEntity):
         # Фиксированный entity_id: на него ссылается карточка datakom-controller-card
         self.entity_id = f"button.datakom_device_control_{action}"
         self._attr_has_entity_name = True
-        self._attr_name = action.capitalize()
         self._attr_unique_id = f"datakom_control_{action}"
         self._attr_translation_key = f"control_{action}"
         self._attr_entity_category = EntityCategory.CONFIG

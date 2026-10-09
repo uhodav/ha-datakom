@@ -69,8 +69,8 @@ class DatakomHealthBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def __init__(self, coordinator, device_name):
         super().__init__(coordinator)
         self._device_name = device_name
+        self.entity_id = "binary_sensor.datakom_device_api_connection"
         self._attr_has_entity_name = True
-        self._attr_name = "API Connection"
         self._attr_unique_id = "datakom_health"
         self._attr_translation_key = "api_connection"
         self._attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
@@ -181,13 +181,11 @@ class DatakomLedBinarySensor(CoordinatorEntity, RestoreEntity, BinarySensorEntit
         super().__init__(coordinator)
         self._led_name = led_name
         self._device_name = device_name
+        # Имя - из перевода; entity_id фиксирован: на него ссылается карточка datakom-controller-card
+        self.entity_id = f"binary_sensor.datakom_device_{led_name}"
         self._attr_has_entity_name = True
-        self._attr_name = f"{led_name}"
-        self._attr_unique_id = f"datakom_led_{led_name.lower()}"
-        # Устанавливаем translation_key для известных LED
-        led_key = led_name.lower().replace(" ", "_").replace("-", "_")
-        if led_key in ["mains", "genset", "auto", "manual", "run", "stop", "test", "auto_ready", "mcb", "gcb", "mains_fail", "prog1", "prog2"]:
-            self._attr_translation_key = led_key
+        self._attr_unique_id = f"datakom_led_{led_name}"
+        self._attr_translation_key = led_name
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._state = None
         self._led_value = None
@@ -302,8 +300,8 @@ class DatakomAlarmBinarySensor(CoordinatorEntity, RestoreEntity, BinarySensorEnt
         super().__init__(coordinator)
         self._alarm_type = alarm_type
         self._device_name = device_name
+        self.entity_id = f"binary_sensor.datakom_device_alarm_{alarm_type.lower()}"
         self._attr_has_entity_name = True
-        self._attr_name = f"Alarm {alarm_type}"
         self._attr_unique_id = f"datakom_alarm_{alarm_type.lower()}"
         # Устанавливаем translation_key для аларма
         alarm_key = f"alarm_{alarm_type.lower()}"

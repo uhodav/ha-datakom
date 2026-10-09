@@ -269,55 +269,58 @@
     },
     "binary_sensor": {
       "api_connection": {
-        "name": "API Connection"
+        "name": "Controller connection"
       },
       "alarm_shutdown": {
-        "name": "Alarm - Shutdown"
+        "name": "Alarm: engine shutdown"
       },
       "alarm_warning": {
-        "name": "Alarm - Warning"
+        "name": "Warning"
       },
       "alarm_loaddump": {
-        "name": "Alarm - LoadDump"
+        "name": "Alarm: load dump"
       },
       "mains": {
-        "name": "Mains"
+        "name": "Mains OK"
       },
       "genset": {
-        "name": "Genset"
+        "name": "Genset voltage OK"
       },
       "auto": {
-        "name": "Auto Mode"
+        "name": "AUTO mode"
       },
       "manual": {
-        "name": "Manual Mode"
+        "name": "MANUAL mode"
       },
       "run": {
-        "name": "Running"
+        "name": "Manual run (engine running)"
       },
       "stop": {
-        "name": "Stopped"
+        "name": "STOP mode"
       },
       "test": {
-        "name": "Test Mode"
+        "name": "TEST mode"
       },
       "auto_ready": {
-        "name": "Auto Ready"
+        "name": "Ready for auto start"
       },
       "mcb": {
-        "name": "Mains Contactor"
+        "name": "Mains contactor closed"
       },
       "gcb": {
-        "name": "Genset Contactor"
+        "name": "Genset contactor closed"
       },
       "mains_fail": {
-        "name": "Mains Fail"
+        "name": "Mains failure"
       },
       "prog1": {
         "name": "Programmable LED 1"
       },
       "prog2": {
         "name": "Programmable LED 2"
+      },
+      "alarm": {
+        "name": "Any alarm or warning"
       }
     },
     "button": {
@@ -376,14 +379,32 @@
         }
       },
       "fuel": {
-        "title": "Fuel consumption model",
-        "description": "Empirical model: consumption Q = max(idle rate, slope × P − offset) L/h, where P is the apparent power in kVA. Time left = (fuel − reserve) / Q, calculated while the genset is running (the last value is kept after it stops).",
+        "title": "Fuel consumption",
+        "description": "Fuel consumption is taken from the fuel flow sensor (flowmeter or engine ECU) when it is installed. Without a sensor it is estimated from the genset load: Q = max(minimum consumption, slope × P − offset) L/h, where P is the genset apparent power in kVA. Time left = (fuel in tank − reserve) / Q, calculated while the genset is running (the last value is kept after it stops).",
         "data": {
-          "fuel_idle_rate": "Minimum (idle) consumption",
+          "fuel_rate_source": "Consumption source",
+          "fuel_idle_rate": "Minimum consumption (idle)",
           "fuel_slope": "Slope",
           "fuel_offset": "Offset",
           "fuel_reserve": "Fuel reserve"
+        },
+        "data_description": {
+          "fuel_rate_source": "Automatic: the flowmeter or ECU when it shows consumption above 0, otherwise the load model. If you have a fuel flow sensor, the model coefficients below are not used.",
+          "fuel_idle_rate": "Model: consumption at idle and low load. The calculated consumption never drops below this value.",
+          "fuel_slope": "Model: how many L/h the consumption grows per 1 kVA of load.",
+          "fuel_offset": "Model: subtracted from slope × P. Together with the slope it sets the straight line of consumption vs load above the idle level.",
+          "fuel_reserve": "Fuel that is not counted in the time left (unusable rest at the bottom of the tank)."
         }
+      }
+    }
+  },
+  "selector": {
+    "fuel_rate_source": {
+      "options": {
+        "auto": "Automatic (sensor, otherwise model)",
+        "model": "Model by load",
+        "flowmeter": "Flowmeter",
+        "ecu": "Engine ECU"
       }
     }
   }

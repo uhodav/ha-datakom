@@ -198,6 +198,8 @@ TOTAL_INCREASING_IDS = {"503", "507", "511", "577", "598", "608"}
 PARAM_GENSET_STATE = "105"
 PARAM_GENSET_KVA = "225"  # Загальна повна потужність генератора
 PARAM_FUEL_LITERS = "585"  # Статус палива (остаток, л)
+# Фактический расход топлива, л/ч (0 - датчик не установлен)
+PARAM_FUEL_RATE = {"flowmeter": "612", "ecu": "614"}
 
 
 async def async_setup_entry(
@@ -257,6 +259,7 @@ async def async_setup_entry(
         _LOGGER.debug(f"Datakom: Created sensor {sensor.unique_id} for param {pid}")
     sensors.append(DatakomDataAgeSensor(coordinator, device_name))
     fuel_model = {key: float(entry_data.get(key, default)) for key, default in FUEL_DEFAULTS.items()}
+    fuel_model["fuel_rate_source"] = entry_data.get("fuel_rate_source", "auto")
     sensors.append(DatakomFuelRateSensor(coordinator, device_name, fuel_model))
     sensors.append(DatakomFuelTimeSensor(coordinator, device_name, fuel_model))
 
@@ -400,7 +403,10 @@ class DatakomParamSensor(CoordinatorEntity, RestoreSensor):
     def device_class(self):
         if self._enum_type:
             return SensorDeviceClass.ENUM
-        return UNIT_MAP.get(self._unit, (None, None, None))[1]
+        device_class = UNIT_MAP.get(self._unit, (None, None, None))[1]
+        if device_class == SensorDeviceClass.VOLUME_STORAGE and str(self._param_id) in TOTAL_INCREASING_IDS:
+            return SensorDeviceClass.VOLUME
+        return device_class
 
     @property
     def state_class(self):
@@ -502,8 +508,9 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, device_name):
         super().__init__(coordinator)
         self._device_name = device_name
+        self.entity_id = "sensor.datakom_device_data_age"
         self._attr_has_entity_name = True
-        self._attr_name = "Data age"
+        self._attr_suggested_display_precision = 0
         self._attr_unique_id = "datakom_data_age"
         self._attr_translation_key = "data_age"
         self._attr_device_class = SensorDeviceClass.DURATION
@@ -536,7 +543,7 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
 
 
 class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
-    """База расчётных сенсоров топлива (эмпирическая модель расхода от нагрузки)."""
+    """База сенсоров топлива: расход с датчика (витратомір/ECU) или по эмпирической модели от нагрузки."""
 
     def __init__(self, coordinator, device_name, fuel_model):
         super().__init__(coordinator)
@@ -573,10 +580,22 @@ class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
             return state != 0  # 0 = at_rest
         return (self._param(PARAM_GENSET_KVA) or 0) > 0
 
-    def _rate(self, load_kva: float) -> float:
-        """Расход топлива, л/ч, при нагрузке load_kva."""
+    def _model_rate(self, load_kva: float) -> float:
+        """Расход топлива по модели, л/ч, при нагрузке load_kva."""
         m = self._fuel_model
         return max(m["fuel_idle_rate"], m["fuel_slope"] * load_kva - m["fuel_offset"])
+
+    def _rate(self):
+        """(расход л/ч, источник) работающего двигателя; (None, None) - датчик выбран, но не показывает."""
+        source = self._fuel_model["fuel_rate_source"]
+        sensors = list(PARAM_FUEL_RATE) if source == "auto" else [source] if source in PARAM_FUEL_RATE else []
+        for name in sensors:
+            rate = self._param(PARAM_FUEL_RATE[name])
+            if rate and rate > 0:
+                return rate, name
+        if source in PARAM_FUEL_RATE:
+            return None, None
+        return self._model_rate(self._param(PARAM_GENSET_KVA) or 0), "model"
 
     def _update(self) -> None:
         raise NotImplementedError
@@ -596,7 +615,7 @@ class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
         if last is not None:
             self._attr_native_value = last.native_value
         last_state = await self.async_get_last_state()
-        if last_state is not None and self._attr_extra_state_attributes is not None:
+        if last_state is not None and getattr(self, "_attr_extra_state_attributes", None):
             self._attr_extra_state_attributes = {
                 key: last_state.attributes.get(key) for key in self._attr_extra_state_attributes
             }
@@ -604,21 +623,26 @@ class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
 
 
 class DatakomFuelRateSensor(DatakomFuelSensor):
-    """Текущий расход топлива по нагрузке генератора (0, когда двигатель не работает)."""
+    """Текущий расход топлива (0, когда двигатель не работает)."""
 
     def __init__(self, coordinator, device_name, fuel_model):
         super().__init__(coordinator, device_name, fuel_model)
-        self._attr_name = "Fuel consumption (calculated)"
+        self.entity_id = "sensor.datakom_device_fuel_consumption_calculated"
         self._attr_unique_id = "datakom_fuel_rate_calc"
         self._attr_translation_key = "fuel_rate_calc"
         self._attr_native_unit_of_measurement = "L/h"
         self._attr_icon = "mdi:fuel"
+        self._attr_extra_state_attributes = dict.fromkeys(("rate_source",))
 
     def _update(self) -> None:
         if not self._engine_running():
             self._attr_native_value = 0.0
-        else:
-            self._attr_native_value = round(self._rate(self._param(PARAM_GENSET_KVA) or 0), 2)
+            return
+        rate, source = self._rate()
+        if rate is None:
+            return
+        self._attr_native_value = round(rate, 2)
+        self._attr_extra_state_attributes = {"rate_source": source}
 
 
 class DatakomFuelTimeSensor(DatakomFuelSensor):
@@ -629,26 +653,29 @@ class DatakomFuelTimeSensor(DatakomFuelSensor):
 
     def __init__(self, coordinator, device_name, fuel_model):
         super().__init__(coordinator, device_name, fuel_model)
-        self._attr_name = "Fuel time left"
+        self.entity_id = "sensor.datakom_device_fuel_time_left"
         self._attr_unique_id = "datakom_fuel_time_left"
         self._attr_translation_key = "fuel_time_left"
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_native_unit_of_measurement = "h"
         self._attr_icon = "mdi:timer-sand"
         self._attr_extra_state_attributes = dict.fromkeys(
-            ("fuel_liters", "reserve_liters", "load_kva", "fuel_rate_l_h")
+            ("fuel_liters", "reserve_liters", "load_kva", "fuel_rate_l_h", "rate_source")
         )
 
     def _update(self) -> None:
         liters = self._param(PARAM_FUEL_LITERS)
         if liters is None or not self._engine_running():
             return
+        rate, source = self._rate()
+        if rate is None:
+            return
         load = self._param(PARAM_GENSET_KVA) or 0
-        rate = self._rate(load)
         self._attr_native_value = round(max(0, liters - self._fuel_model["fuel_reserve"]) / rate, 1)
         self._attr_extra_state_attributes = {
             "fuel_liters": liters,
             "reserve_liters": self._fuel_model["fuel_reserve"],
             "load_kva": load,
             "fuel_rate_l_h": round(rate, 2),
+            "rate_source": source,
         }

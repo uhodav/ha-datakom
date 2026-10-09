@@ -92,11 +92,14 @@ Parameters from the API are automatically converted to sensors:
 ### Diagnostic Sensors
 - **Data age** - seconds since the controller sent the last telemetry. When the data is older than the API threshold (5 minutes by default) or the API is unreachable, parameter sensors, LEDs and alarms keep their **last values** (they never become unavailable), and `API Connection` turns off - use it to tell whether the values are current.
 
-### Fuel Sensors (calculated)
-- **Fuel consumption (calculated)** (`L/h`) - current consumption from the genset load: `Q = max(2.5, 1.014 × P − 17.97)`, where `P` is the genset total apparent power (kVA). `0` when the engine is not running.
-- **Fuel time left** (`h`) - how long the fuel lasts at the current genset load: `T = max(0, L − 30) / Q`, where `L` is the fuel in the tank (`Fuel Status`, L) and 30 L is an unusable reserve. Calculated only while the genset is running; when it stops, the last value is kept. Attributes: `fuel_liters`, `reserve_liters`, `load_kva`, `fuel_rate_l_h`.
+### Fuel Sensors
+- **Fuel consumption (calculated)** (`L/h`) - current fuel consumption, `0` when the engine is not running. Taken from the fuel flow sensor - flowmeter (`Fuel Rate (Flow Meter)`) or engine ECU (`Fuel Rate (ECU)`) - when it is installed. Without a sensor it is estimated from the genset load: `Q = max(2.5, 1.014 × P − 17.97)`, where `P` is the genset total apparent power (kVA). Attribute `rate_source`: `flowmeter` / `ecu` / `model`.
+- **Fuel time left** (`h`) - how long the fuel lasts at the current consumption: `T = max(0, L − 30) / Q`, where `L` is the fuel in the tank (`Fuel Status`, L) and 30 L is an unusable reserve. Calculated only while the genset is running; when it stops, the last value is kept. Attributes: `fuel_liters`, `reserve_liters`, `load_kva`, `fuel_rate_l_h`, `rate_source`.
 
-The coefficients are an empirical fit for a specific generator - adjust them (and the reserve) in the integration options, step **Fuel consumption model**.
+Settings are in the integration options, step **Fuel consumption**:
+- **Consumption source** - *Automatic* (default): the flowmeter or ECU when it shows consumption above 0, otherwise the load model; or force *Model by load*, *Flowmeter* or *Engine ECU*. With a fuel flow sensor the model coefficients are not used.
+- **Minimum consumption**, **Slope**, **Offset** - the load model `Q = max(minimum, slope × P − offset)`. The defaults are an empirical fit for a specific generator: measure the consumption at a few loads and fit a straight line for yours.
+- **Fuel reserve** - fuel not counted in the time left.
 
 ### Statistics and Energy Dashboard
 - Units are converted to Home Assistant standards (`°C`, `h`, `d`, `L`, `bar`, `rpm`)
@@ -104,19 +107,24 @@ The coefficients are an empirical fit for a specific generator - adjust them (an
 - `Genset Total kWh` (and other kWh/kVArh counters, run hours, starts, cranks) have `total_increasing` state class — add `Genset Total kWh` to **Settings → Dashboards → Energy** as a generation source
 
 ### Binary Sensors
-- **`binary_sensor.api_connection`** - API connection status
-- **`binary_sensor.mains`** - MAINS AVAILABLE LED of the panel
-- **`binary_sensor.genset`** - GENSET AVAILABLE LED of the panel
-- **`binary_sensor.auto_ready`** - AUTO READY LED of the panel
-- **`binary_sensor.mcb`**, **`binary_sensor.gcb`** - Mains / genset contactor LEDs of the panel
-- **`binary_sensor.mains_fail`** - MAINS LED lit red (mains failure; the MAINS LED is two-color)
-- **`binary_sensor.prog1`**, **`binary_sensor.prog2`** - Programmable LEDs of the panel (function assigned in the controller settings)
-- **`binary_sensor.auto`** - Auto mode LED (calculated: on when mode is AUTO)
-- **`binary_sensor.manual`** - Manual mode LED (calculated: on when mode is MANUAL)
-- **`binary_sensor.alarm`** - Alarm LED (calculated: on when any alarm is active)
-- **`binary_sensor.alarm_shutdown`** - Shutdown alarms
-- **`binary_sensor.alarm_warning`** - Warning alarms
-- **`binary_sensor.alarm_loaddump`** - LoadDump alarms
+Panel indicators of the controller, as on its front panel (`binary_sensor.datakom_device_*`):
+
+| Entity | Name | On when |
+|---|---|---|
+| `mains` | Mains OK | mains voltage is within limits (MAINS LED green) |
+| `mains_fail` | Mains failure | mains failure (MAINS LED red; the LED is two-color) |
+| `genset` | Genset voltage OK | genset voltage is within limits (GENSET LED) |
+| `mcb` | Mains contactor closed | the load is fed from the mains |
+| `gcb` | Genset contactor closed | the load is fed from the genset |
+| `auto` / `manual` / `test` / `stop` | AUTO / MANUAL / TEST / STOP mode | the controller is in this mode (mode button LEDs) |
+| `run` | Manual run (engine running) | MANUAL mode and the engine is running (RUN button LED) |
+| `auto_ready` | Ready for auto start | AUTO mode and the genset will start by itself on a mains failure |
+| `prog1`, `prog2` | Programmable LED 1 / 2 | the function assigned to the LED in the controller settings is active |
+| `alarm` | Any alarm or warning | there is at least one active alarm or warning |
+| `alarm_shutdown` | Alarm: engine shutdown | shutdown alarms (the engine is stopped) - list in the `alarms` attribute |
+| `alarm_loaddump` | Alarm: load dump | load dump alarms (the load is disconnected, the engine cools down) |
+| `alarm_warning` | Warning | warnings (the genset keeps running) |
+| `api_connection` | Controller connection | the API answers and the controller data is current; off - the values of other entities are the last known ones |
 
 **Note**: LED indicators are taken from the controller panel LED block (API parameter 117) with the same bit layout as the Datakom portal, so they match the portal. The `led_value` attribute is the LED color code (1 = yellow, 2 = green). With an older API server without parameter 117 they are calculated from the genset mode and state.
 
@@ -451,11 +459,14 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 ### Діагностичні сенсори
 - **Вік даних** - скільки секунд тому контролер надіслав останню телеметрію. Коли дані старші за поріг API (за замовчуванням 5 хвилин) або API недоступний, сенсори параметрів, LED та аварії зберігають **останні значення** (не стають недоступними), а `API Connection` вимикається - за ним видно, чи значення актуальні.
 
-### Сенсори палива (розрахункові)
-- **Витрата палива (розрахункова)** (`л/год`) - поточна витрата за навантаженням генератора: `Q = max(2.5, 1.014 × P − 17.97)`, де `P` - загальна повна потужність генератора (кВА). `0`, коли двигун не працює.
-- **Палива вистачить на** (`год`) - на скільки вистачить палива при поточному навантаженні генератора: `T = max(0, L − 30) / Q`, де `L` - паливо в баку (`Статус палива`, л), 30 л - резерв, що не використовується. Розраховується лише під час роботи генератора; після зупинки зберігається останнє значення. Атрибути: `fuel_liters`, `reserve_liters`, `load_kva`, `fuel_rate_l_h`.
+### Сенсори палива
+- **Витрата палива (розрахункова)** (`л/год`) - поточна витрата палива, `0`, коли двигун не працює. Береться з датчика витрати - витратоміра (`Швидкість витрати палива (витратомір)`) або ECU двигуна (`Швидкість витрати палива (ECU)`), якщо він встановлений. Без датчика розраховується за навантаженням генератора: `Q = max(2.5, 1.014 × P − 17.97)`, де `P` - загальна повна потужність генератора (кВА). Атрибут `rate_source`: `flowmeter` / `ecu` / `model`.
+- **Палива вистачить на** (`год`) - на скільки вистачить палива при поточній витраті: `T = max(0, L − 30) / Q`, де `L` - паливо в баку (`Статус палива`, л), 30 л - резерв, що не використовується. Розраховується лише під час роботи генератора; після зупинки зберігається останнє значення. Атрибути: `fuel_liters`, `reserve_liters`, `load_kva`, `fuel_rate_l_h`, `rate_source`.
 
-Коефіцієнти - емпірична апроксимація для конкретного генератора; змінити їх (і резерв) можна в опціях інтеграції, крок **Модель витрати палива**.
+Налаштування - в опціях інтеграції, крок **Витрата палива**:
+- **Джерело витрати** - *Автоматично* (за замовчуванням): витратомір або ECU, якщо показує витрату більше 0, інакше модель за навантаженням; або примусово *Модель за навантаженням*, *Витратомір* чи *ECU двигуна*. З датчиком витрати коефіцієнти моделі не використовуються.
+- **Мінімальна витрата**, **Нахил**, **Зсув** - модель `Q = max(мінімальна, нахил × P − зсув)`. Значення за замовчуванням - емпірична апроксимація для конкретного генератора: для свого заміряйте витрату при кількох навантаженнях і підберіть пряму.
+- **Резерв палива** - паливо, яке не враховується в часі роботи.
 
 ### Статистика та панель Енергія
 - Одиниці приведені до стандартів Home Assistant (`°C`, `h`, `d`, `L`, `bar`, `rpm`)
@@ -463,19 +474,24 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - `Загальна енергія кВт·год` (та інші лічильники кВт·год/кВАр·год, мотогодини, пуски, прокрутки) мають клас стану `total_increasing` — додайте `Загальна енергія кВт·год` у **Налаштування → Панелі → Енергія** як джерело генерації
 
 ### Бінарні сенсори
-- **`binary_sensor.api_connection`** - Стан підключення до API
-- **`binary_sensor.mains`** - LED панелі «мережа доступна» (MAINS AVAILABLE)
-- **`binary_sensor.genset`** - LED панелі «генератор доступний» (GENSET AVAILABLE)
-- **`binary_sensor.auto_ready`** - LED панелі AUTO READY
-- **`binary_sensor.mcb`**, **`binary_sensor.gcb`** - LED контакторів мережі / генератора
-- **`binary_sensor.mains_fail`** - LED MAINS світиться червоним (аварія мережі; LED MAINS двоколірний)
-- **`binary_sensor.prog1`**, **`binary_sensor.prog2`** - Програмовані LED панелі (функція призначається в налаштуваннях контролера)
-- **`binary_sensor.auto`** - LED автоматичного режиму (розраховується: увімкнено в режимі AUTO)
-- **`binary_sensor.manual`** - LED ручного режиму (розраховується: увімкнено в режимі MANUAL)
-- **`binary_sensor.alarm`** - LED аварії (розраховується: увімкнено при наявності активних аварій)
-- **`binary_sensor.alarm_shutdown`** - Аварії вимкнення
-- **`binary_sensor.alarm_warning`** - Попереджувальні аварії
-- **`binary_sensor.alarm_loaddump`** - Аварії скидання навантаження
+Індикатори панелі контролера, як на його лицьовій панелі (`binary_sensor.datakom_device_*`):
+
+| Сутність | Назва | Увімкнено, коли |
+|---|---|---|
+| `mains` | Мережа в нормі | напруга мережі в межах норми (LED MAINS зелений) |
+| `mains_fail` | Аварія мережі | аварія мережі (LED MAINS червоний; LED двоколірний) |
+| `genset` | Напруга генератора в нормі | напруга генератора в межах норми (LED GENSET) |
+| `mcb` | Контактор мережі замкнений | навантаження живиться від мережі |
+| `gcb` | Контактор генератора замкнений | навантаження живиться від генератора |
+| `auto` / `manual` / `test` / `stop` | Режим АВТО / РУЧНИЙ / ТЕСТ / СТОП | контролер у цьому режимі (LED кнопок режимів) |
+| `run` | Ручний пуск (двигун працює) | режим РУЧНИЙ і двигун працює (LED кнопки RUN) |
+| `auto_ready` | Готовий до автозапуску | режим АВТО і генератор сам запуститься при аварії мережі |
+| `prog1`, `prog2` | Програмований індикатор 1 / 2 | активна функція, призначена LED у налаштуваннях контролера |
+| `alarm` | Є аварія або попередження | є хоча б одна активна аварія або попередження |
+| `alarm_shutdown` | Аварія: зупинка двигуна | аварії з зупинкою двигуна - перелік в атрибуті `alarms` |
+| `alarm_loaddump` | Аварія: скидання навантаження | аварії зі скиданням навантаження (навантаження відключається, двигун охолоджується) |
+| `alarm_warning` | Попередження | попередження (генератор продовжує працювати) |
+| `api_connection` | Зв'язок з контролером | API відповідає і дані контролера актуальні; вимкнено - значення інших сутностей останні відомі |
 
 **Примітка**: Індикатори LED беруться з блоку світлодіодів панелі контролера (параметр API 117) з тією ж розкладкою бітів, що й на порталі Datakom, тому збігаються з порталом. Атрибут `led_value` — код кольору LED (1 = жовтий, 2 = зелений). Зі старим API-сервером без параметра 117 вони розраховуються з режиму та стану генератора.
 

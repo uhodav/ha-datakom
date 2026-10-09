@@ -2,7 +2,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
-from . import DOMAIN, FUEL_DEFAULTS, _cleanup_old_entities
+from . import DOMAIN, FUEL_DEFAULTS, FUEL_RATE_SOURCES, _cleanup_old_entities
 from .coordinator import DEFAULT_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL
 import aiohttp
 import logging
@@ -142,6 +142,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "device_name": "Datakom Device",
                     "control_key": getattr(self, "control_key", ""),
                     **FUEL_DEFAULTS,
+                    "fuel_rate_source": FUEL_RATE_SOURCES[0],
                 }
                 _LOGGER.debug(f"Datakom: Creating entry with data: {entry_data}")
                 return self.async_create_entry(
@@ -286,7 +287,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_fuel(self, user_input=None):
-        """Fuel consumption model: Q = max(idle_rate, slope * P - offset)."""
+        """Fuel consumption: sensor (flowmeter/ECU) or model Q = max(idle_rate, slope * P - offset)."""
         errors = {}
         current_data = self.config_entry.data
 
@@ -299,6 +300,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     "param_ids": self.param_ids,
                     "device_name": current_data.get("device_name", "Datakom Device"),
                     "control_key": getattr(self, "control_key", current_data.get("control_key", "")),
+                    "fuel_rate_source": user_input["fuel_rate_source"],
                     **{key: float(user_input[key]) for key in FUEL_DEFAULTS},
                 }
                 _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")
@@ -328,8 +330,19 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="fuel",
             data_schema=vol.Schema({
-                vol.Required(key, default=current_data.get(key, default)): number(*units[key])
-                for key, default in FUEL_DEFAULTS.items()
+                vol.Required(
+                    "fuel_rate_source", default=current_data.get("fuel_rate_source", FUEL_RATE_SOURCES[0])
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=FUEL_RATE_SOURCES,
+                        translation_key="fuel_rate_source",
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                **{
+                    vol.Required(key, default=current_data.get(key, default)): number(*units[key])
+                    for key, default in FUEL_DEFAULTS.items()
+                },
             }),
             errors=errors,
         )
