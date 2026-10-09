@@ -259,6 +259,12 @@
       },
       "data_age": {
         "name": "Data age"
+      },
+      "fuel_rate_calc": {
+        "name": "Fuel consumption (calculated)"
+      },
+      "fuel_time_left": {
+        "name": "Fuel time left"
       }
     },
     "binary_sensor": {
@@ -367,6 +373,16 @@
         "description": "Choose the parameters to create sensors for.",
         "data": {
           "param_ids": "Parameters"
+        }
+      },
+      "fuel": {
+        "title": "Fuel consumption model",
+        "description": "Empirical model: consumption Q = max(idle rate, slope × P − offset) L/h, where P is the apparent power in kVA. Time left = (fuel − reserve) / Q; when the genset is stopped, the mains load is used (forecast for an outage).",
+        "data": {
+          "fuel_idle_rate": "Minimum (idle) consumption",
+          "fuel_slope": "Slope",
+          "fuel_offset": "Offset",
+          "fuel_reserve": "Fuel reserve"
         }
       }
     }

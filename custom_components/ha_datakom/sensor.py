@@ -17,7 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.util import dt as dt_util
 
-from . import DOMAIN
+from . import DOMAIN, FUEL_DEFAULTS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -187,6 +187,12 @@ UNIT_MAP = {
 # Счетчики (запуски, прокрутки, моточасы, расход топлива)
 TOTAL_INCREASING_IDS = {"503", "507", "511", "577", "598", "608"}
 
+# Параметры API для расчёта топлива
+PARAM_GENSET_STATE = "105"
+PARAM_GENSET_KVA = "225"  # Загальна повна потужність генератора
+PARAM_MAINS_KVA = "169"   # Загальна повна потужність мережі
+PARAM_FUEL_LITERS = "585"  # Статус палива (остаток, л)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -237,7 +243,10 @@ async def async_setup_entry(
         sensors.append(sensor)
         _LOGGER.debug(f"Datakom: Created sensor {sensor.unique_id} for param {pid}")
     sensors.append(DatakomDataAgeSensor(coordinator, device_name))
-    
+    fuel_model = {key: float(entry_data.get(key, default)) for key, default in FUEL_DEFAULTS.items()}
+    sensors.append(DatakomFuelRateSensor(coordinator, device_name, fuel_model))
+    sensors.append(DatakomFuelTimeSensor(coordinator, device_name, fuel_model))
+
     if sensors:
         _LOGGER.info(f"Datakom: Adding {len(sensors)} sensors")
         async_add_entities(sensors)
@@ -499,3 +508,110 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         data = self.coordinator.data or {}
         return {"stale": data.get("stale"), "telemetry_timestamp": data.get("timestamp")}
+
+
+class DatakomFuelSensor(CoordinatorEntity, SensorEntity):
+    """База расчётных сенсоров топлива (эмпирическая модель расхода от нагрузки)."""
+
+    def __init__(self, coordinator, device_name, fuel_model):
+        super().__init__(coordinator)
+        self._device_name = device_name
+        self._fuel_model = fuel_model
+        self._attr_has_entity_name = True
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_suggested_display_precision = 1
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, "datakom_device")},
+            "name": self._device_name,
+            "manufacturer": "Datakom",
+            "model": "Device",
+        }
+
+    @property
+    def available(self) -> bool:
+        data = self.coordinator.data or {}
+        return super().available and not data.get("stale", False)
+
+    def _param(self, param_id: str):
+        """Числовое значение параметра или None."""
+        p = (self.coordinator.data or {}).get("params", {}).get(param_id)
+        try:
+            return float(p.get("value"))
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    def _engine_running(self) -> bool:
+        state = self._param(PARAM_GENSET_STATE)
+        if state is not None:
+            return state != 0  # 0 = at_rest
+        return (self._param(PARAM_GENSET_KVA) or 0) > 0
+
+    def _rate(self, load_kva: float) -> float:
+        """Расход топлива, л/ч, при нагрузке load_kva."""
+        m = self._fuel_model
+        return max(m["fuel_idle_rate"], m["fuel_slope"] * load_kva - m["fuel_offset"])
+
+
+class DatakomFuelRateSensor(DatakomFuelSensor):
+    """Текущий расход топлива по нагрузке генератора (0, когда двигатель не работает)."""
+
+    def __init__(self, coordinator, device_name, fuel_model):
+        super().__init__(coordinator, device_name, fuel_model)
+        self._attr_name = "Fuel consumption (calculated)"
+        self._attr_unique_id = "datakom_fuel_rate_calc"
+        self._attr_translation_key = "fuel_rate_calc"
+        self._attr_native_unit_of_measurement = "L/h"
+        self._attr_icon = "mdi:fuel"
+
+    @property
+    def native_value(self):
+        if not self._engine_running():
+            return 0.0
+        return round(self._rate(self._param(PARAM_GENSET_KVA) or 0), 2)
+
+
+class DatakomFuelTimeSensor(DatakomFuelSensor):
+    """На сколько часов хватит топлива (без резерва) при текущей нагрузке.
+
+    Когда генератор не работает, нагрузку берём с сети - прогноз на случай отключения.
+    """
+
+    def __init__(self, coordinator, device_name, fuel_model):
+        super().__init__(coordinator, device_name, fuel_model)
+        self._attr_name = "Fuel time left"
+        self._attr_unique_id = "datakom_fuel_time_left"
+        self._attr_translation_key = "fuel_time_left"
+        self._attr_device_class = SensorDeviceClass.DURATION
+        self._attr_native_unit_of_measurement = "h"
+        self._attr_icon = "mdi:timer-sand"
+
+    def _load(self):
+        """(нагрузка кВА, источник)."""
+        if self._engine_running():
+            return self._param(PARAM_GENSET_KVA) or 0, "genset"
+        mains = self._param(PARAM_MAINS_KVA)
+        if mains is not None:
+            return mains, "mains"
+        return 0, "none"
+
+    @property
+    def native_value(self):
+        liters = self._param(PARAM_FUEL_LITERS)
+        if liters is None:
+            return None
+        load, _ = self._load()
+        return round(max(0, liters - self._fuel_model["fuel_reserve"]) / self._rate(load), 1)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        load, source = self._load()
+        return {
+            "fuel_liters": self._param(PARAM_FUEL_LITERS),
+            "reserve_liters": self._fuel_model["fuel_reserve"],
+            "load_kva": load,
+            "load_source": source,
+            "fuel_rate_l_h": round(self._rate(load), 2),
+        }

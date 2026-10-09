@@ -92,6 +92,12 @@ Parameters from the API are automatically converted to sensors:
 ### Diagnostic Sensors
 - **Data age** - seconds since the controller sent the last telemetry. When the data is older than the API threshold (5 minutes by default), parameter sensors, LEDs and alarms become **unavailable** instead of showing old values, and `API Connection` turns off.
 
+### Fuel Sensors (calculated)
+- **Fuel consumption (calculated)** (`L/h`) - current consumption from the genset load: `Q = max(2.5, 1.014 × P − 17.97)`, where `P` is the genset total apparent power (kVA). `0` when the engine is not running.
+- **Fuel time left** (`h`) - how long the fuel lasts at the current load: `T = max(0, L − 30) / Q`, where `L` is the fuel in the tank (`Fuel Status`, L) and 30 L is an unusable reserve. When the genset is stopped, the mains load is used as `P` (forecast for an outage). Attributes: `fuel_liters`, `reserve_liters`, `load_kva`, `load_source` (`genset`/`mains`), `fuel_rate_l_h`.
+
+The coefficients are an empirical fit for a specific generator - adjust them (and the reserve) in the integration options, step **Fuel consumption model**.
+
 ### Statistics and Energy Dashboard
 - Units are converted to Home Assistant standards (`°C`, `h`, `d`, `L`, `bar`, `rpm`)
 - Voltage, current, frequency, power, temperature, pressure, fuel level have `measurement` state class (long-term statistics and graphs)
@@ -444,6 +450,12 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Діагностичні сенсори
 - **Вік даних** - скільки секунд тому контролер надіслав останню телеметрію. Коли дані старші за поріг API (за замовчуванням 5 хвилин), сенсори параметрів, LED та аварії стають **недоступними** замість показу старих значень, а `API Connection` вимикається.
+
+### Сенсори палива (розрахункові)
+- **Витрата палива (розрахункова)** (`л/год`) - поточна витрата за навантаженням генератора: `Q = max(2.5, 1.014 × P − 17.97)`, де `P` - загальна повна потужність генератора (кВА). `0`, коли двигун не працює.
+- **Палива вистачить на** (`год`) - на скільки вистачить палива при поточному навантаженні: `T = max(0, L − 30) / Q`, де `L` - паливо в баку (`Статус палива`, л), 30 л - резерв, що не використовується. Коли генератор не працює, як `P` береться навантаження мережі (прогноз на випадок відключення). Атрибути: `fuel_liters`, `reserve_liters`, `load_kva`, `load_source` (`genset`/`mains`), `fuel_rate_l_h`.
+
+Коефіцієнти - емпірична апроксимація для конкретного генератора; змінити їх (і резерв) можна в опціях інтеграції, крок **Модель витрати палива**.
 
 ### Статистика та панель Енергія
 - Одиниці приведені до стандартів Home Assistant (`°C`, `h`, `d`, `L`, `bar`, `rpm`)

@@ -2,7 +2,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
-from . import DOMAIN, _cleanup_old_entities
+from . import DOMAIN, FUEL_DEFAULTS, _cleanup_old_entities
 from .coordinator import DEFAULT_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL
 import aiohttp
 import logging
@@ -141,6 +141,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "param_ids": selected_params,
                     "device_name": "Datakom Device",
                     "control_key": getattr(self, "control_key", ""),
+                    **FUEL_DEFAULTS,
                 }
                 _LOGGER.debug(f"Datakom: Creating entry with data: {entry_data}")
                 return self.async_create_entry(
@@ -272,33 +273,63 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
             if not selected_params:
                 errors["param_ids"] = "required"
             else:
-                try:
-                    # Удаляем параметры, которых нет в новом выборе
-                    cleaned_params = [p for p in selected_params if p in param_choices]
-                    # cleaned_params содержит только те, что реально доступны
-                    new_data = {
-                        "api_url": self.api_url,
-                        "scan_interval": self.scan_interval,
-                        "language": self.language,
-                        "param_ids": cleaned_params,
-                        "device_name": current_data.get("device_name", "Datakom Device"),
-                        "control_key": getattr(self, "control_key", current_data.get("control_key", "")),
-                    }
-                    _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")
-                    self.hass.config_entries.async_update_entry(
-                        self.config_entry, data=new_data, title="Datakom listener"
-                    )
-                    # Перезагружаем интеграцию (cleanup выполнится в async_setup_entry)
-                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-                    return self.async_create_entry(title="", data={})
-                except Exception as e:
-                    _LOGGER.error(f"Datakom Options: Failed to update entry: {e}")
-                    errors["base"] = "update_failed"
+                # Оставляем только параметры, которые реально доступны
+                self.param_ids = [p for p in selected_params if p in param_choices]
+                return await self.async_step_fuel()
         
         return self.async_show_form(
             step_id="params",
             data_schema=vol.Schema({
                 vol.Required("param_ids", default=current_data.get("param_ids", [])): cv.multi_select(param_choices)
+            }),
+            errors=errors,
+        )
+
+    async def async_step_fuel(self, user_input=None):
+        """Fuel consumption model: Q = max(idle_rate, slope * P - offset)."""
+        errors = {}
+        current_data = self.config_entry.data
+
+        if user_input is not None:
+            try:
+                new_data = {
+                    "api_url": self.api_url,
+                    "scan_interval": self.scan_interval,
+                    "language": self.language,
+                    "param_ids": self.param_ids,
+                    "device_name": current_data.get("device_name", "Datakom Device"),
+                    "control_key": getattr(self, "control_key", current_data.get("control_key", "")),
+                    **{key: float(user_input[key]) for key in FUEL_DEFAULTS},
+                }
+                _LOGGER.debug(f"Datakom Options: Updating entry with new_data: {new_data}")
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=new_data, title="Datakom listener"
+                )
+                # Перезагружаем интеграцию (cleanup выполнится в async_setup_entry)
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data={})
+            except Exception as e:
+                _LOGGER.error(f"Datakom Options: Failed to update entry: {e}")
+                errors["base"] = "update_failed"
+
+        def number(unit, step):
+            return selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=1000, step=step, mode=selector.NumberSelectorMode.BOX, unit_of_measurement=unit
+                )
+            )
+
+        units = {
+            "fuel_idle_rate": ("L/h", 0.01),
+            "fuel_slope": ("L/kVAh", 0.001),
+            "fuel_offset": ("L/h", 0.01),
+            "fuel_reserve": ("L", 1),
+        }
+        return self.async_show_form(
+            step_id="fuel",
+            data_schema=vol.Schema({
+                vol.Required(key, default=current_data.get(key, default)): number(*units[key])
+                for key, default in FUEL_DEFAULTS.items()
             }),
             errors=errors,
         )
