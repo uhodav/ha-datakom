@@ -20,6 +20,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.util import dt as dt_util
 
 from . import DOMAIN, FUEL_DEFAULTS
+from .fuel_filter import FuelLevelFilter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -197,7 +198,8 @@ TOTAL_INCREASING_IDS = {"503", "507", "511", "577", "598", "608"}
 # Параметры API для расчёта топлива
 PARAM_GENSET_STATE = "105"
 PARAM_GENSET_KVA = "225"  # Загальна повна потужність генератора
-PARAM_FUEL_LITERS = "585"  # Статус палива (остаток, л)
+PARAM_FUEL_LITERS = "585"  # Статус палива (остаток, л) - расчётный: уровень % × объём бака
+PARAM_FUEL_PERCENT = ("247", "293")  # Рівень палива / ДАТЧИК рівня палива, %
 # Фактический расход топлива, л/ч (0 - датчик не установлен)
 PARAM_FUEL_RATE = {"flowmeter": "612", "ecu": "614"}
 
@@ -260,8 +262,11 @@ async def async_setup_entry(
     sensors.append(DatakomDataAgeSensor(coordinator, device_name))
     fuel_model = {key: float(entry_data.get(key, default)) for key, default in FUEL_DEFAULTS.items()}
     fuel_model["fuel_rate_source"] = entry_data.get("fuel_rate_source", "auto")
-    sensors.append(DatakomFuelRateSensor(coordinator, device_name, fuel_model))
-    sensors.append(DatakomFuelTimeSensor(coordinator, device_name, fuel_model))
+    # Один фильтр на устройство: сглаженный уровень и время работы считаются по нему
+    fuel_filter = FuelLevelFilter()
+    sensors.append(DatakomFuelLevelSensor(coordinator, device_name, fuel_model, fuel_filter))
+    sensors.append(DatakomFuelRateSensor(coordinator, device_name, fuel_model, fuel_filter))
+    sensors.append(DatakomFuelTimeSensor(coordinator, device_name, fuel_model, fuel_filter))
 
     if sensors:
         _LOGGER.info(f"Datakom: Adding {len(sensors)} sensors")
@@ -545,10 +550,11 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
 class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
     """База сенсоров топлива: расход с датчика (витратомір/ECU) или по эмпирической модели от нагрузки."""
 
-    def __init__(self, coordinator, device_name, fuel_model):
+    def __init__(self, coordinator, device_name, fuel_model, fuel_filter: FuelLevelFilter):
         super().__init__(coordinator)
         self._device_name = device_name
         self._fuel_model = fuel_model
+        self._filter = fuel_filter
         self._attr_has_entity_name = True
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_suggested_display_precision = 1
@@ -579,6 +585,20 @@ class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
         if state is not None:
             return state != 0  # 0 = at_rest
         return (self._param(PARAM_GENSET_KVA) or 0) > 0
+
+    def _feed_filter(self) -> None:
+        """Передать показания в фильтр уровня (один раз на обновление координатора)."""
+        data = self.coordinator.data or {}
+        percent = next(
+            (value for value in map(self._param, PARAM_FUEL_PERCENT) if value is not None), None
+        )
+        self._filter.update(
+            dt_util.utcnow().timestamp(),
+            percent,
+            self._engine_running(),
+            self._param(PARAM_FUEL_LITERS),
+            key=id(data),
+        )
 
     def _model_rate(self, load_kva: float) -> float:
         """Расход топлива по модели, л/ч, при нагрузке load_kva."""
@@ -622,11 +642,38 @@ class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):
         self._update_if_data()
 
 
+class DatakomFuelLevelSensor(DatakomFuelSensor):
+    """Сглаженный уровень топлива, % (см. fuel_filter)."""
+
+    def __init__(self, coordinator, device_name, fuel_model, fuel_filter):
+        super().__init__(coordinator, device_name, fuel_model, fuel_filter)
+        self.entity_id = "sensor.datakom_device_fuel_level_smoothed"
+        self._attr_unique_id = "datakom_fuel_level_smoothed"
+        self._attr_translation_key = "fuel_level_smoothed"
+        self._attr_native_unit_of_measurement = "%"
+        self._attr_icon = "mdi:gauge"
+        self._attr_extra_state_attributes = self._filter.attributes()
+
+    async def async_added_to_hass(self) -> None:
+        # Фильтр продолжает с сохранённого состояния (уровень в покое, база запуска)
+        last = await self.async_get_last_sensor_data()
+        last_state = await self.async_get_last_state()
+        if last_state is not None:
+            self._filter.restore(last.native_value if last else None, last_state.attributes)
+        await super().async_added_to_hass()
+
+    def _update(self) -> None:
+        self._feed_filter()
+        if self._filter.level is not None:
+            self._attr_native_value = self._filter.level
+        self._attr_extra_state_attributes = self._filter.attributes()
+
+
 class DatakomFuelRateSensor(DatakomFuelSensor):
     """Текущий расход топлива (0, когда двигатель не работает)."""
 
-    def __init__(self, coordinator, device_name, fuel_model):
-        super().__init__(coordinator, device_name, fuel_model)
+    def __init__(self, coordinator, device_name, fuel_model, fuel_filter):
+        super().__init__(coordinator, device_name, fuel_model, fuel_filter)
         self.entity_id = "sensor.datakom_device_fuel_consumption_calculated"
         self._attr_unique_id = "datakom_fuel_rate_calc"
         self._attr_translation_key = "fuel_rate_calc"
@@ -649,10 +696,11 @@ class DatakomFuelTimeSensor(DatakomFuelSensor):
     """На сколько часов хватит топлива (без резерва) при текущей нагрузке генератора.
 
     Считается только пока генератор работает; после остановки остаётся последнее значение.
+    Топливо - по сглаженному уровню (на ходу датчик занижает и шумит), иначе - Статус палива.
     """
 
-    def __init__(self, coordinator, device_name, fuel_model):
-        super().__init__(coordinator, device_name, fuel_model)
+    def __init__(self, coordinator, device_name, fuel_model, fuel_filter):
+        super().__init__(coordinator, device_name, fuel_model, fuel_filter)
         self.entity_id = "sensor.datakom_device_fuel_time_left"
         self._attr_unique_id = "datakom_fuel_time_left"
         self._attr_translation_key = "fuel_time_left"
@@ -664,7 +712,10 @@ class DatakomFuelTimeSensor(DatakomFuelSensor):
         )
 
     def _update(self) -> None:
-        liters = self._param(PARAM_FUEL_LITERS)
+        self._feed_filter()
+        liters = self._filter.liters
+        if liters is None:
+            liters = self._param(PARAM_FUEL_LITERS)
         if liters is None or not self._engine_running():
             return
         rate, source = self._rate()

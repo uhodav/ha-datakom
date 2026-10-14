@@ -95,7 +95,9 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
             "datakom_led_auto_ready", "datakom_led_mcb", "datakom_led_gcb",
             "datakom_led_mains_fail", "datakom_led_prog1", "datakom_led_prog2"
         }
-        valid_sensor_ids = {"datakom_data_age", "datakom_fuel_rate_calc", "datakom_fuel_time_left"}
+        valid_sensor_ids = {
+            "datakom_data_age", "datakom_fuel_level_smoothed", "datakom_fuel_rate_calc", "datakom_fuel_time_left",
+        }
         valid_button_ids = {"datakom_refresh"}
         if entry.data.get("control_key"):
             valid_button_ids |= {f"datakom_control_{a}" for a in ("stop", "auto", "manual", "test")}

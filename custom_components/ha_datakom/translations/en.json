@@ -260,6 +260,9 @@
       "data_age": {
         "name": "Data age"
       },
+      "fuel_level_smoothed": {
+        "name": "Fuel level (smoothed)"
+      },
       "fuel_rate_calc": {
         "name": "Fuel consumption (calculated)"
       },
