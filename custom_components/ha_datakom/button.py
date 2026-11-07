@@ -1,4 +1,5 @@
 """Платформа button для Datakom интеграции (REST API)."""
+import asyncio
 import logging
 import aiohttp
 
@@ -9,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import DOMAIN
 
@@ -16,6 +18,10 @@ _LOGGER = logging.getLogger(__name__)
 
 # Дії, дозволені API за замовчуванням (genset/mains - перемикання навантаження - вимкнені)
 CONTROL_ACTIONS = ["stop", "auto", "manual", "test"]
+
+# Сервер відповідає за ~20 с (команда в черзі) або ~10 с (підтвердження), але запити виконуються по одному:
+# кілька натискань поспіль чекають одне одного
+CONTROL_TIMEOUT = 90
 
 
 async def async_setup_entry(
@@ -35,11 +41,15 @@ async def async_setup_entry(
         return
 
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    tracker = hass.data[DOMAIN][entry.entry_id].get("command")
     entities = [DatakomRefreshButton(coordinator, device_name)]
     # Кнопки керування створюються лише коли задано ключ керування (X-API-Key)
     control_key = entry_data.get("control_key", "")
     if control_key:
-        entities += [DatakomControlButton(api_url, device_name, action, control_key, coordinator) for action in CONTROL_ACTIONS]
+        entities += [
+            DatakomControlButton(api_url, device_name, action, control_key, coordinator, tracker)
+            for action in CONTROL_ACTIONS
+        ]
     async_add_entities(entities)
 class DatakomRefreshButton(ButtonEntity):
     """Button для немедленного обновления данных Datakom."""
@@ -78,9 +88,10 @@ class DatakomRefreshButton(ButtonEntity):
 class DatakomControlButton(ButtonEntity):
     """Button для управления устройством Datakom (Run/Auto/Manual/Test/Stop)."""
 
-    def __init__(self, api_url, device_name, action, control_key, coordinator):
+    def __init__(self, api_url, device_name, action, control_key, coordinator, tracker=None):
         self._api_url = api_url
         self._coordinator = coordinator
+        self._tracker = tracker
         self._device_name = device_name
         self._action = action
         self._control_key = control_key
@@ -119,29 +130,53 @@ class DatakomControlButton(ButtonEntity):
         }
 
     async def async_press(self) -> None:
-        """Обработка нажатия кнопки управления."""
+        """Обработка нажатия кнопки управления.
+
+        Контроллер подключается к API примерно раз в минуту: команда между подключениями стоит в очереди
+        сервера (он отвечает «queued» через ~20 с). Ход команды - в sensor.datakom_device_control_command."""
+        tracker = self._tracker
+        # Та же команда уже отправляется или ждёт в очереди - повторное нажатие ничего не меняет
+        if tracker and tracker.action == self._action and tracker.state in ("sending", "queued"):
+            _LOGGER.info(f"Datakom: Control command {self._action} already {tracker.state}, press ignored")
+            return
+
+        request_id = tracker.start(self._action, self._coordinator.data) if tracker else 0
         url = f"{self._api_url}/device/control"
         _LOGGER.info(f"Datakom: Sending control command {self._action} to {url}")
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url,
-                    json={"action": self._action},
-                    headers={"X-API-Key": self._control_key},
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as resp:
-                    data = await resp.json(content_type=None)
+            session = async_get_clientsession(self.hass)
+            async with session.post(
+                url,
+                json={"action": self._action},
+                headers={"X-API-Key": self._control_key},
+                timeout=aiohttp.ClientTimeout(total=CONTROL_TIMEOUT),
+            ) as resp:
+                data = await resp.json(content_type=None)
         except Exception as e:
-            _LOGGER.error(f"Datakom: Control button {self._attr_unique_id} request error: {e}")
-            raise HomeAssistantError(f"Datakom: команда {self._action} не відправлена: {e}") from e
+            reason = (
+                f"немає відповіді від API-сервера за {CONTROL_TIMEOUT} с"
+                if isinstance(e, (asyncio.TimeoutError, TimeoutError))
+                else (str(e) or type(e).__name__)
+            )
+            _LOGGER.error(f"Datakom: Control button {self._attr_unique_id} request error: {reason}")
+            if tracker:
+                tracker.finish(request_id, "failed", reason)
+            raise HomeAssistantError(f"Datakom: команда {self._action} не відправлена: {reason}") from e
 
         if not data.get("success"):
+            error = data.get("error") or "невідома помилка"
             _LOGGER.error(f"Datakom: Control command {self._action} failed, response: {data}")
-            raise HomeAssistantError(f"Datakom: команда {self._action} не виконана: {data.get('error')}")
+            if tracker:
+                tracker.finish(request_id, "failed", error)
+            raise HomeAssistantError(f"Datakom: команда {self._action} не виконана: {error}")
         if data.get("queued"):
             _LOGGER.info(f"Datakom: Control command {self._action} queued until the controller reconnects")
+            if tracker:
+                tracker.finish(request_id, "queued")
         else:
             _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")
+            if tracker:
+                tracker.finish(request_id, "confirmed")
         # Контроллер присылает новый режим через несколько секунд после подтверждения
         async def _refresh(_now):
             await self._coordinator.async_request_refresh()

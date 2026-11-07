@@ -12,6 +12,6 @@
   ],
   "documentation": "https://github.com/uhodav/ha-datakom",
   "requirements": [],
-  "version": "2.10.0",
+  "version": "2.11.0",
   "iot_class": "cloud_polling"
 }

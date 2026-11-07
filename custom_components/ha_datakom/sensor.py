@@ -20,6 +20,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.util import dt as dt_util
 
 from . import DOMAIN, FUEL_DEFAULTS
+from .command import COMMAND_STATES
 from .fuel_filter import FuelLevelFilter
 
 _LOGGER = logging.getLogger(__name__)
@@ -267,6 +268,10 @@ async def async_setup_entry(
     sensors.append(DatakomFuelLevelSensor(coordinator, device_name, fuel_model, fuel_filter))
     sensors.append(DatakomFuelRateSensor(coordinator, device_name, fuel_model, fuel_filter))
     sensors.append(DatakomFuelTimeSensor(coordinator, device_name, fuel_model, fuel_filter))
+    # Хід команди керування - лише коли є кнопки керування (задано ключ керування)
+    tracker = hass.data[DOMAIN][entry.entry_id].get("command")
+    if entry_data.get("control_key") and tracker:
+        sensors.append(DatakomCommandSensor(tracker, device_name))
 
     if sensors:
         _LOGGER.info(f"Datakom: Adding {len(sensors)} sensors")
@@ -545,6 +550,45 @@ class DatakomDataAgeSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         data = self.coordinator.data or {}
         return {"stale": data.get("stale"), "telemetry_timestamp": data.get("timestamp")}
+
+
+class DatakomCommandSensor(SensorEntity):
+    """Хід останньої команди керування: sending -> queued / confirmed -> done, або failed / expired.
+
+    Картка datakom-controller-card підсвічує кнопку, поки команда виконується, і показує цей статус."""
+
+    _attr_should_poll = False
+
+    def __init__(self, tracker, device_name):
+        self._tracker = tracker
+        self._device_name = device_name
+        self.entity_id = "sensor.datakom_device_control_command"
+        self._attr_has_entity_name = True
+        self._attr_unique_id = "datakom_control_command"
+        self._attr_translation_key = "control_command"
+        self._attr_device_class = SensorDeviceClass.ENUM
+        self._attr_options = COMMAND_STATES
+        self._attr_icon = "mdi:gesture-tap-button"
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._tracker.async_add_listener(self.async_write_ha_state))
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, "datakom_device")},
+            "name": self._device_name,
+            "manufacturer": "Datakom",
+            "model": "Device",
+        }
+
+    @property
+    def native_value(self):
+        return self._tracker.state
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return self._tracker.attributes
 
 
 class DatakomFuelSensor(CoordinatorEntity, RestoreSensor):

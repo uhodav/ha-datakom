@@ -431,6 +431,31 @@ class DatakomControllerCard extends HTMLElement {
           text-align: center;
           padding: 20px;
         }
+
+        /* Команда натиснута і ще виконується (у черзі до підключення контролера) */
+        .button-circle.pending {
+          animation: cmd-pending 1.2s ease-in-out infinite;
+        }
+        @keyframes cmd-pending {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.9); }
+          50% { box-shadow: 0 0 0 7px rgba(243, 156, 18, 0); }
+        }
+        .button-circle.pending .button-indicator {
+          background: #f39c12;
+          border-color: #d4a300;
+          animation: led-blink 0.8s steps(1) infinite;
+        }
+
+        .command-status {
+          min-height: 18px;
+          margin-top: 10px;
+          text-align: center;
+          font-size: 12px;
+          color: #bbb;
+        }
+        .command-status.active { color: #f39c12; }
+        .command-status.done { color: #27ae60; }
+        .command-status.failed { color: #e74c3c; }
       </style>
       
       <div class="card-container">
@@ -466,6 +491,7 @@ class DatakomControllerCard extends HTMLElement {
         <div class="control-buttons">
           ${this.renderControlButtons()}
         </div>
+        <div class="command-status" id="command-status"></div>
       </div>
     `;
     
@@ -590,15 +616,21 @@ class DatakomControllerCard extends HTMLElement {
         
         // Если указан button_entity, вызываем сервис кнопки
         if (buttonEntity && this._hass) {
+          // Мгновенный отклик до прихода состояния sensor.*_control_command; новая кнопка заменяет прошлую команду
+          this._localCommand = { action, state: 'sending', at: Date.now() };
+          this.updateStates();
           this._hass.callService('button', 'press', {
             entity_id: buttonEntity
+          }).catch(err => {
+            this._localCommand = { action, state: 'failed', at: Date.now(), error: (err && err.message) || String(err) };
+            this.updateStates();
           });
-          
+
           // Через 3 секунды обновляем состояния
           setTimeout(() => {
             this.updateStates();
           }, 3000);
-        } 
+        }
         // Иначе используем старый способ с tap_action
         else if (tapAction) {
           this.handleTapAction(JSON.parse(tapAction));
@@ -647,8 +679,86 @@ class DatakomControllerCard extends HTMLElement {
     return result;
   }
 
+  // Хід останньої команди: sensor.datakom_device_control_command (або локальний стан одразу після натискання)
+  currentCommand() {
+    const entity = this.config.command_entity || 'sensor.datakom_device_control_command';
+    const stateObj = this._hass.states[entity];
+    let cmd = null;
+    if (stateObj && stateObj.state !== 'idle' && stateObj.attributes.action) {
+      const a = stateObj.attributes;
+      cmd = {
+        action: a.action, state: stateObj.state, error: a.error, expires: a.expires_at,
+        at: Date.parse(a.updated_at || stateObj.last_changed),
+      };
+    }
+    const local = this._localCommand;
+    if (local) {
+      const age = Date.now() - local.at;
+      const sensorHasIt = cmd && cmd.action === local.action && cmd.at >= local.at - 5000;
+      if (!sensorHasIt && age < (local.state === 'failed' ? 90000 : 8000)) return local;
+    }
+    return cmd;
+  }
+
+  updateCommandStatus() {
+    const ACTIVE = ['sending', 'queued', 'confirmed'];
+    const cmd = this.currentCommand();
+    const active = cmd && ACTIVE.includes(cmd.state);
+    // Підсвічуємо лише кнопку останньої команди, поки вона виконується
+    this.shadowRoot.querySelectorAll('.button-circle').forEach(button => {
+      button.classList.toggle('pending', !!active && button.getAttribute('data-action') === cmd.action);
+    });
+
+    const el = this.shadowRoot.getElementById('command-status');
+    if (!el) return;
+    const recent = cmd && (active || Date.now() - cmd.at < 90000);
+    if (!recent) {
+      el.textContent = '';
+      el.className = 'command-status';
+      return;
+    }
+    const lang = ((this._hass.locale && this._hass.locale.language) || this._hass.language || 'uk').slice(0, 2);
+    const T = {
+      uk: {
+        sending: 'надсилаю команду…',
+        queued: 'у черзі — контролер підключається раз на ~1 хв',
+        confirmed: 'прийнята контролером, чекаю зміни режиму…',
+        done: 'виконано',
+        failed: 'помилка',
+        expired: 'не виконано — контролер не підключився',
+      },
+      ru: {
+        sending: 'отправляю команду…',
+        queued: 'в очереди — контроллер подключается раз в ~1 мин',
+        confirmed: 'принята контроллером, жду смены режима…',
+        done: 'выполнено',
+        failed: 'ошибка',
+        expired: 'не выполнено — контроллер не подключился',
+      },
+      en: {
+        sending: 'sending the command…',
+        queued: 'queued — the controller connects about once a minute',
+        confirmed: 'accepted by the controller, waiting for the mode change…',
+        done: 'done',
+        failed: 'error',
+        expired: 'not executed — the controller did not connect',
+      },
+    }[lang] || null;
+    const t = T || { sending: 'sending…', queued: 'queued', confirmed: 'accepted', done: 'done', failed: 'error', expired: 'expired' };
+    const btn = (this.config.control_buttons || []).find(b => b.action === cmd.action);
+    const label = (btn && btn.label) || String(cmd.action || '').toUpperCase();
+    const time = d => new Date(d).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    let text = `${label}: ${t[cmd.state] || cmd.state}`;
+    if (cmd.state === 'done') text += ` ${time(cmd.at)}`;
+    if (cmd.state === 'failed' && cmd.error) text += ` — ${cmd.error}`;
+    el.textContent = text;
+    el.className = 'command-status ' + (active ? 'active' : cmd.state === 'done' ? 'done' : 'failed');
+  }
+
   updateStates() {
     if (!this._hass || !this.shadowRoot) return;
+
+    this.updateCommandStatus();
 
     // Update status, side and mimic LEDs
     this.shadowRoot.querySelectorAll('.status-indicator .led, .side-led').forEach(led => {

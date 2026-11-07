@@ -268,6 +268,18 @@
       },
       "fuel_time_left": {
         "name": "Fuel time left"
+      },
+      "control_command": {
+        "name": "Control command",
+        "state": {
+          "idle": "None",
+          "sending": "Sending",
+          "queued": "Queued (waiting for controller)",
+          "confirmed": "Accepted by controller",
+          "done": "Done",
+          "failed": "Failed",
+          "expired": "Not executed (queue expired)"
+        }
       }
     },
     "binary_sensor": {

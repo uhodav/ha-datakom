@@ -6,6 +6,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.loader import async_get_integration
 
 from .card_loader import async_register_cards
+from .command import CommandTracker
 from .coordinator import DEFAULT_SCAN_INTERVAL, DatakomCoordinator
 
 DOMAIN = "ha_datakom"
@@ -64,7 +65,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_refresh()
     
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator, "data": entry.data}
+    # Хід останньої команди керування (кнопки): після кожного оновлення даних перевіряємо, чи змінився режим
+    tracker = CommandTracker(hass)
+    entry.async_on_unload(coordinator.async_add_listener(lambda: tracker.check(coordinator.data)))
+    hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator, "data": entry.data, "command": tracker}
     
     # Удаляем старые entity перед созданием новых
     await _cleanup_old_entities(hass, entry)
@@ -98,6 +102,8 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
         valid_sensor_ids = {
             "datakom_data_age", "datakom_fuel_level_smoothed", "datakom_fuel_rate_calc", "datakom_fuel_time_left",
         }
+        if entry.data.get("control_key"):
+            valid_sensor_ids.add("datakom_control_command")
         valid_button_ids = {"datakom_refresh"}
         if entry.data.get("control_key"):
             valid_button_ids |= {f"datakom_control_{a}" for a in ("stop", "auto", "manual", "test")}
