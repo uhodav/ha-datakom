@@ -172,11 +172,11 @@ class DatakomControlButton(ButtonEntity):
         if data.get("queued"):
             _LOGGER.info(f"Datakom: Control command {self._action} queued until the controller reconnects")
             if tracker:
-                tracker.finish(request_id, "queued")
+                tracker.finish(request_id, "queued", data=self._coordinator.data)
         else:
             _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")
             if tracker:
-                tracker.finish(request_id, "confirmed")
+                tracker.finish(request_id, "confirmed", data=self._coordinator.data)
         # Контроллер присылает новый режим через несколько секунд после подтверждения
         async def _refresh(_now):
             await self._coordinator.async_request_refresh()

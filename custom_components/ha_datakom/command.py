@@ -39,6 +39,7 @@ class CommandTracker:
         self.expires_at: datetime | None = None
         self.error: str | None = None
         self.mode_before: str | None = None
+        self._telemetry_at = None  # мітка телеметрії на момент постановки в чергу
         self._request_id = 0
         self._listeners: list[Callable[[], None]] = []
 
@@ -83,12 +84,21 @@ class CommandTracker:
         self._notify()
         return self._request_id
 
+    @property
+    def _already_in_mode(self) -> bool:
+        """Контролер уже був у режимі цієї кнопки: зміни режиму не буде, чекати її не можна."""
+        return self.mode_before is not None and self.mode_before == MODE_BY_ACTION.get(self.action)
+
     @callback
-    def finish(self, request_id: int, state: str, error: str | None = None) -> None:
+    def finish(self, request_id: int, state: str, error: str | None = None, data: dict | None = None) -> None:
         if request_id != self._request_id:
             return
         now = dt_util.utcnow()
+        # Підтверджена контролером, а режим уже потрібний - виконано одразу
+        if state == "confirmed" and self._already_in_mode:
+            state = "done"
         self.state, self.error, self.updated_at = state, error, now
+        self._telemetry_at = (data or {}).get("timestamp")
         if state == "queued":
             self.expires_at = now + QUEUE_LIFETIME
         elif state == "confirmed":
@@ -106,7 +116,15 @@ class CommandTracker:
         target = MODE_BY_ACTION.get(self.action)
         now = dt_util.utcnow()
         # Виконано, коли режим змінився на потрібний (якщо вже був таким - чекаємо підтвердження/таймауту)
-        if mode and mode == target and mode != self.mode_before and not (data or {}).get("stale"):
+        fresh = not (data or {}).get("stale")
+        if mode and mode == target and mode != self.mode_before and fresh:
+            self.state, self.updated_at, self.expires_at = "done", now, None
+        elif (
+            self.state == "queued" and self._already_in_mode and fresh
+            and (data or {}).get("timestamp") not in (None, self._telemetry_at)
+        ):
+            # Режим уже потрібний: нова телеметрія означає, що контролер підключився,
+            # а сервер надсилає команду з черги одразу після пакета - виконано
             self.state, self.updated_at, self.expires_at = "done", now, None
         elif self.expires_at and now > self.expires_at:
             # Підтверджена контролером або режим уже потрібний - виконана; інакше черга минула
