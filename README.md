@@ -127,7 +127,7 @@ Panel indicators of the controller, as on its front panel (`binary_sensor.datako
 | `alarm_warning` | Warning | warnings (the genset keeps running) |
 | `api_connection` | Controller connection | the API answers and the controller data is current; off - the values of other entities are the last known ones |
 
-**Note**: LED indicators are taken from the controller panel LED block (API parameter 117) with the same bit layout as the Datakom portal, so they match the portal. The `led_value` attribute is the LED color code (1 = yellow, 2 = green). With an older API server without parameter 117 they are calculated from the genset mode and state.
+**Note**: LED indicators are taken from the controller panel LED block (API parameter 117) with the same bit layout as the Datakom portal, so they match the portal. The `led_value` attribute is the LED color code (1 = yellow, 2 = green). With an older API server without parameter 117 they are calculated from the genset mode and state. Exception: on the D-500 the RUN LED bit is the same as MAN (lit in MANUAL mode even with the engine stopped), so `run` is shown only when the engine actually runs (Genset State is not At Rest).
 
 ### Buttons
 - **`button.datakom_device_refresh`** - Refresh data now (without waiting for the update interval)

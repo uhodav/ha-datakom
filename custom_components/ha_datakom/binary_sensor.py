@@ -244,6 +244,15 @@ class DatakomLedBinarySensor(CoordinatorEntity, RestoreEntity, BinarySensorEntit
                 bit = PANEL_LEDS[self._led_name]
                 self._led_value = int(leds[bit // 8 * 2:bit // 8 * 2 + 2], 16) >> (bit % 8) & 0b11
                 self._state = 1 if self._led_value else 0
+                if self._led_name == "run":
+                    # Біт RUN на D500 збігається з MAN і горить у ручному режимі навіть без обертів.
+                    # Показуємо RUN лише коли двигун справді працює (105 Genset State != at_rest).
+                    try:
+                        running = int(params.get("105") or 0) != 0
+                    except (TypeError, ValueError):
+                        running = False
+                    if not running:
+                        self._state = 0
                 return
 
             # ID параметров (из примера API):
