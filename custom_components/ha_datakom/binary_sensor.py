@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN
+from .outputs import output_info, shown_outputs
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ async def async_setup_entry(
         sensors.append(alarm_sensor)
         _LOGGER.debug(f"Datakom: Created alarm binary sensor {alarm_sensor.unique_id}")
     
+    # Виходи контролера (функція і стан), якщо API-сервер їх віддає (/device/io)
+    sensors += [DatakomOutputBinarySensor(coordinator, n, device_name) for n in shown_outputs(coordinator.data)]
+
     if sensors:
         _LOGGER.info(f"Datakom Binary Sensor: Adding {len(sensors)} sensors")
         async_add_entities(sensors)
@@ -401,3 +405,53 @@ class DatakomAlarmBinarySensor(CoordinatorEntity, RestoreEntity, BinarySensorEnt
     def available(self) -> bool:
         # Нет связи или данные устарели - показываем последнее состояние
         return True
+
+
+class DatakomOutputBinarySensor(CoordinatorEntity, BinarySensorEntity):
+    """Вихід N контролера: увімкнений / вимкнений, у назві - його функція (як у Rainbow Plus)."""
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:electric-switch-closed"
+
+    def __init__(self, coordinator, number: int, device_name: str):
+        super().__init__(coordinator)
+        self._number = number
+        self._device_name = device_name
+        self.entity_id = f"binary_sensor.datakom_device_output_{number}"
+        self._attr_unique_id = f"datakom_output_{number}"
+        self._attr_translation_key = "output"
+        info = output_info(coordinator.data, number) or {}
+        self._attr_translation_placeholders = {"number": str(number), "function": info.get("function", "?")}
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, "datakom_device")},
+            "name": self._device_name,
+            "manufacturer": "Datakom",
+            "model": "Device",
+        }
+
+    @property
+    def _info(self) -> dict | None:
+        return output_info(self.coordinator.data, self._number)
+
+    @property
+    def available(self) -> bool:
+        return self._info is not None and "state" in self._info
+
+    @property
+    def is_on(self) -> bool | None:
+        info = self._info
+        return info.get("state") if info else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        info = self._info or {}
+        io = (self.coordinator.data or {}).get("io") or {}
+        return {
+            "output": self._number,
+            "function": info.get("function"),
+            "function_index": info.get("function_index"),
+            "updated": io.get("timestamp"),
+        }

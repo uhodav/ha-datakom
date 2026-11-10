@@ -339,6 +339,9 @@
       },
       "alarm": {
         "name": "Any alarm or warning"
+      },
+      "output": {
+        "name": "Output {number}: {function}"
       }
     },
     "button": {
@@ -379,6 +382,29 @@
     "switch": {
       "user_output": {
         "name": "Output {number}"
+      }
+    },
+    "text": {
+      "schedule_mon": {
+        "name": "AUTO schedule: Monday"
+      },
+      "schedule_tue": {
+        "name": "AUTO schedule: Tuesday"
+      },
+      "schedule_wed": {
+        "name": "AUTO schedule: Wednesday"
+      },
+      "schedule_thu": {
+        "name": "AUTO schedule: Thursday"
+      },
+      "schedule_fri": {
+        "name": "AUTO schedule: Friday"
+      },
+      "schedule_sat": {
+        "name": "AUTO schedule: Saturday"
+      },
+      "schedule_sun": {
+        "name": "AUTO schedule: Sunday"
       }
     }
   },

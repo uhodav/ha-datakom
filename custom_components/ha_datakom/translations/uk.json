@@ -339,6 +339,9 @@
       },
       "alarm": {
         "name": "Є аварія або попередження"
+      },
+      "output": {
+        "name": "Вихід {number}: {function}"
       }
     },
     "button": {
@@ -379,6 +382,29 @@
     "switch": {
       "user_output": {
         "name": "Вихід {number}"
+      }
+    },
+    "text": {
+      "schedule_mon": {
+        "name": "Графік AUTO: понеділок"
+      },
+      "schedule_tue": {
+        "name": "Графік AUTO: вівторок"
+      },
+      "schedule_wed": {
+        "name": "Графік AUTO: середа"
+      },
+      "schedule_thu": {
+        "name": "Графік AUTO: четвер"
+      },
+      "schedule_fri": {
+        "name": "Графік AUTO: пʼятниця"
+      },
+      "schedule_sat": {
+        "name": "Графік AUTO: субота"
+      },
+      "schedule_sun": {
+        "name": "Графік AUTO: неділя"
       }
     }
   },

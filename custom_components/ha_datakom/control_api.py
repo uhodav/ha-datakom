@@ -70,3 +70,23 @@ async def async_send_control(hass: HomeAssistant, api_url: str, control_key: str
 
     for delay in (3, 10):
         async_call_later(hass, delay, _refresh)
+
+
+async def async_post_api(hass: HomeAssistant, api_url: str, control_key: str, path: str, payload: dict,
+                         timeout: int = 150) -> dict:
+    """POST на API-сервер з X-API-Key; помилка -> HomeAssistantError з текстом сервера."""
+    try:
+        session = async_get_clientsession(hass)
+        async with session.post(
+            f"{api_url}/{path}", json=payload, headers={"X-API-Key": control_key},
+            timeout=aiohttp.ClientTimeout(total=timeout),
+        ) as resp:
+            data = await resp.json(content_type=None)
+    except Exception as e:
+        reason = (f"немає відповіді від API-сервера за {timeout} с"
+                  if isinstance(e, (asyncio.TimeoutError, TimeoutError)) else (str(e) or type(e).__name__))
+        raise HomeAssistantError(f"Datakom: {path}: {reason}") from e
+    if not isinstance(data, dict) or not data.get("success"):
+        error = (data or {}).get("error") if isinstance(data, dict) else str(data)
+        raise HomeAssistantError(f"Datakom: {path}: {error or 'невідома помилка'}")
+    return data

@@ -1,7 +1,8 @@
 """Користувацькі виходи контролера (User outputs 1-16) - перемикачі.
 
-Контролер приймає команду «увімкнути / вимкнути вихід N» (регістр 8201), але стан виходів у телеметрії
-не передає: перемикач показує останню надіслану команду (assumed state) і відновлює її після перезапуску HA.
+Контролер приймає команду «увімкнути / вимкнути вихід N» (регістр 8201) - це функція виходу
+«Remote Control Out N». Якщо її призначено реле контролера, перемикач показує справжній стан цього реле
+(/device/io); інакше - останню надіслану команду (assumed state, відновлюється після перезапуску HA).
 Які виходи показувати - налаштування інтеграції «Користувацькі виходи» (наприклад 1,3)."""
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import DOMAIN, USER_OUTPUT_SIGNAL, parse_user_outputs
+from .outputs import remote_control_outputs
 from .control_api import async_send_control
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,7 +40,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class DatakomUserOutputSwitch(SwitchEntity, RestoreEntity):
     """Користувацький вихід N контролера."""
 
-    _attr_assumed_state = True
     _attr_has_entity_name = True
     _attr_icon = "mdi:electric-switch"
 
@@ -65,8 +66,27 @@ class DatakomUserOutputSwitch(SwitchEntity, RestoreEntity):
         }
 
     @property
+    def _relays(self) -> list[dict]:
+        """Реле з функцією «Remote Control Out N» і відомим станом."""
+        return [o for o in remote_control_outputs(self._coordinator.data, self._number) if "state" in o]
+
+    @property
+    def assumed_state(self) -> bool:
+        return not self._relays
+
+    @property
+    def is_on(self) -> bool | None:
+        relays = self._relays
+        if relays:
+            return any(o["state"] for o in relays)
+        return self._attr_is_on
+
+    @property
     def extra_state_attributes(self) -> dict:
-        return {"output": self._number}
+        return {
+            "output": self._number,
+            "relays": [o["output"] for o in remote_control_outputs(self._coordinator.data, self._number)],
+        }
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -74,6 +94,8 @@ class DatakomUserOutputSwitch(SwitchEntity, RestoreEntity):
         if last and last.state in ("on", "off"):
             self._attr_is_on = last.state == "on"
         self.async_on_remove(async_dispatcher_connect(self.hass, USER_OUTPUT_SIGNAL, self._on_switched))
+        # Справжній стан реле приходить з оновленням даних
+        self.async_on_remove(self._coordinator.async_add_listener(self.async_write_ha_state))
 
     @callback
     def _on_switched(self, number: int, on: bool) -> None:

@@ -19,7 +19,7 @@ MAX_SCAN_INTERVAL = 600
 
 
 class DatakomCoordinator(DataUpdateCoordinator):
-    """Читает /dump_devm, /dump_devm_alarm и /health одним циклом опроса."""
+    """Читает /dump_devm, /dump_devm_alarm, /health и /device/io (выходы и график) одним циклом опроса."""
 
     def __init__(self, hass: HomeAssistant, api_url: str, language: str, scan_interval: int):
         super().__init__(
@@ -51,10 +51,11 @@ class DatakomCoordinator(DataUpdateCoordinator):
             return {**self.data, "stale": True, "health": None}
 
     async def _fetch(self) -> dict:
-        dump, alarm, health = await asyncio.gather(
+        dump, alarm, health, io = await asyncio.gather(
             self._get_json(f"dump_devm?language={self.language}"),
             self._get_json(f"dump_devm_alarm?language={self.language}"),
             self._get_json("health"),
+            self._get_json("device/io"),
             return_exceptions=True,
         )
 
@@ -69,11 +70,16 @@ class DatakomCoordinator(DataUpdateCoordinator):
         if isinstance(health, Exception):
             _LOGGER.warning(f"Datakom: health failed: {health}")
             health = None
+        # Выходы и недельный график (listener 043a738+): нет - оставляем прежние (старый сервер - None)
+        if isinstance(io, Exception) or not io.get("success"):
+            _LOGGER.debug(f"Datakom: device/io unavailable: {io}")
+            io = (self.data or {}).get("io")
 
         return {
             "params": {str(p["id"]): p for p in dump.get("result", [])},
             "alarm": alarm,
             "health": health,
+            "io": io,
             "stale": bool(dump.get("stale", False)),
             "data_age_seconds": dump.get("data_age_seconds"),
             "timestamp": dump.get("timestamp"),

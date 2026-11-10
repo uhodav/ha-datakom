@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 __all__ = ["DOMAIN", "FUEL_DEFAULTS", "FUEL_RATE_SOURCES", "USER_OUTPUTS", "USER_OUTPUT_SIGNAL", "parse_user_outputs", "_cleanup_old_entities"]
 
-PLATFORMS = ["sensor", "binary_sensor", "button", "switch"]
+PLATFORMS = ["sensor", "binary_sensor", "button", "switch", "text"]
 
 # Користувацькі виходи контролера (User outputs): номери 1..16
 USER_OUTPUTS = 16
@@ -198,10 +198,17 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
                     
             elif entity.domain == "binary_sensor":
                 # Для binary_sensor: удаляем если unique_id не в списке правильных или имеет старый prefix
-                if entity.unique_id not in valid_binary_sensor_ids:
+                # (выходы контроллера datakom_output_N создаются по данным /device/io)
+                output = entity.unique_id.removeprefix("datakom_output_")
+                if entity.unique_id not in valid_binary_sensor_ids and not (output.isdigit() and 1 <= int(output) <= 40):
                     should_remove = True
                     _LOGGER.debug(f"Datakom: Will remove binary_sensor {entity.entity_id} - not in valid list")
                     
+            elif entity.domain == "text":
+                # Недельный график - только с ключом управления
+                if not (entry.data.get("control_key") and entity.unique_id.startswith("datakom_schedule_")):
+                    should_remove = True
+
             elif entity.domain == "switch":
                 if entity.unique_id not in valid_switch_ids:
                     should_remove = True

@@ -339,6 +339,9 @@
       },
       "alarm": {
         "name": "Есть авария или предупреждение"
+      },
+      "output": {
+        "name": "Выход {number}: {function}"
       }
     },
     "button": {
@@ -379,6 +382,29 @@
     "switch": {
       "user_output": {
         "name": "Выход {number}"
+      }
+    },
+    "text": {
+      "schedule_mon": {
+        "name": "График AUTO: понедельник"
+      },
+      "schedule_tue": {
+        "name": "График AUTO: вторник"
+      },
+      "schedule_wed": {
+        "name": "График AUTO: среда"
+      },
+      "schedule_thu": {
+        "name": "График AUTO: четверг"
+      },
+      "schedule_fri": {
+        "name": "График AUTO: пятница"
+      },
+      "schedule_sat": {
+        "name": "График AUTO: суббота"
+      },
+      "schedule_sun": {
+        "name": "График AUTO: воскресенье"
       }
     }
   },
