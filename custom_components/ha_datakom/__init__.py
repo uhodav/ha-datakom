@@ -1,7 +1,11 @@
 import logging
 from pathlib import Path
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.loader import async_get_integration
 
@@ -12,7 +16,25 @@ from .coordinator import DEFAULT_SCAN_INTERVAL, DatakomCoordinator
 DOMAIN = "ha_datakom"
 _LOGGER = logging.getLogger(__name__)
 
-__all__ = ["DOMAIN", "FUEL_DEFAULTS", "FUEL_RATE_SOURCES", "_cleanup_old_entities"]
+__all__ = ["DOMAIN", "FUEL_DEFAULTS", "FUEL_RATE_SOURCES", "USER_OUTPUTS", "USER_OUTPUT_SIGNAL", "parse_user_outputs", "_cleanup_old_entities"]
+
+PLATFORMS = ["sensor", "binary_sensor", "button", "switch"]
+
+# Користувацькі виходи контролера (User outputs): номери 1..16
+USER_OUTPUTS = 16
+# Сигнал «вихід N перемкнуто» (сервіс set_user_output -> перемикач цього виходу)
+USER_OUTPUT_SIGNAL = f"{DOMAIN}_user_output"
+
+
+def parse_user_outputs(value) -> list[int]:
+    """«1, 3,5» або [1, 3, 5] -> [1, 3, 5]; ValueError, якщо номер не 1..16."""
+    if not value:
+        return []
+    items = value if isinstance(value, (list, tuple)) else str(value).replace(";", ",").split(",")
+    outputs = sorted({int(str(x).strip()) for x in items if str(x).strip()})
+    if any(not 1 <= n <= USER_OUTPUTS for n in outputs):
+        raise ValueError(f"user outputs must be 1..{USER_OUTPUTS}")
+    return outputs
 
 # Источник расхода топлива: auto - датчик (витратомір/ECU), если показывает > 0, иначе модель;
 # model - только модель; flowmeter / ecu - только фактический расход с датчика
@@ -81,9 +103,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Удаляем старые entity перед созданием новых
     await _cleanup_old_entities(hass, entry)
     
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "button"])
-    
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _async_register_services(hass)
+
     return True
+
+
+SET_USER_OUTPUT_SCHEMA = vol.Schema({
+    vol.Required("output"): vol.All(vol.Coerce(int), vol.Range(min=1, max=USER_OUTPUTS)),
+    vol.Required("state"): vol.In(["on", "off"]),
+})
+
+
+def _async_register_services(hass: HomeAssistant) -> None:
+    """ha_datakom.set_user_output: увімкнути / вимкнути будь-який користувацький вихід 1..16."""
+    if hass.services.has_service(DOMAIN, "set_user_output"):
+        return
+
+    async def _set_user_output(call: ServiceCall) -> None:
+        from .control_api import async_send_control
+
+        runtime = next((r for r in hass.data.get(DOMAIN, {}).values()
+                        if isinstance(r, dict) and r.get("data", {}).get("control_key")), None)
+        if not runtime:
+            raise HomeAssistantError("Datakom: керування вимкнене - не задано ключ керування")
+        number, state = call.data["output"], call.data["state"]
+        await async_send_control(
+            hass, runtime["data"].get("api_url", ""), runtime["data"]["control_key"],
+            {"action": "output", "output": number, "state": state},
+            runtime["coordinator"], runtime.get("command"), label=f"output {number} {state}",
+        )
+        # Перемикач цього виходу (якщо показаний) - теж у новий стан
+        async_dispatcher_send(hass, USER_OUTPUT_SIGNAL, number, state == "on")
+
+    hass.services.async_register(DOMAIN, "set_user_output", _set_user_output, schema=SET_USER_OUTPUT_SCHEMA)
 
 async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Удаляет старые entity которых больше нет в текущей конфигурации."""
@@ -113,8 +166,15 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
         if entry.data.get("control_key"):
             valid_sensor_ids.add("datakom_control_command")
         valid_button_ids = {"datakom_refresh"}
+        valid_switch_ids = set()
         if entry.data.get("control_key"):
-            valid_button_ids |= {f"datakom_control_{a}" for a in ("stop", "auto", "manual", "test")}
+            valid_button_ids |= {
+                f"datakom_control_{a}" for a in ("stop", "auto", "manual", "test", "run", "service1_reset")
+            }
+            try:
+                valid_switch_ids = {f"datakom_user_output_{n}" for n in parse_user_outputs(entry.data.get("user_outputs"))}
+            except ValueError:
+                pass
         
         removed_count = 0
         for entity in entities:
@@ -142,6 +202,11 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
                     should_remove = True
                     _LOGGER.debug(f"Datakom: Will remove binary_sensor {entity.entity_id} - not in valid list")
                     
+            elif entity.domain == "switch":
+                if entity.unique_id not in valid_switch_ids:
+                    should_remove = True
+                    _LOGGER.debug(f"Datakom: Will remove switch {entity.entity_id} - output not configured")
+
             elif entity.domain == "button":
                 # Для button: удаляем если unique_id не в списке правильных или имеет старый prefix
                 if entity.unique_id not in valid_button_ids:
@@ -162,7 +227,7 @@ async def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "button"])
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

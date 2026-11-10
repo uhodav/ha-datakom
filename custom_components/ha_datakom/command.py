@@ -1,4 +1,4 @@
-"""Состояние последней команды керування контролером (кнопки Stop/Auto/Manual/Test).
+"""Состояние последней команды керування контролером (кнопки Stop/Auto/Manual/Test/Run, ТО-1, виходи).
 
 Контролер не тримає постійного зʼєднання з API-сервером: він підключається приблизно раз на хвилину.
 Команда, натиснута між підключеннями, стоїть у черзі сервера і виконується при наступному підключенні,
@@ -25,6 +25,10 @@ CONFIRM_LIFETIME = timedelta(seconds=120)
 # Режим контролера (параметр 103), у який переводить кожна кнопка
 MODE_BY_ACTION = {"stop": "stop", "auto": "auto", "manual": "manual", "test": "test"}
 GENSET_MODE_BY_VALUE = {"1": "stop", "2": "manual", "4": "auto", "8": "test"}
+# Пуск: виконано, коли двигун вийшов зі стану спокою (параметр 105 Genset State != 0 at_rest)
+START_ACTIONS = ("run",)
+# Команди без видимого результату в телеметрії: виконано, щойно контролер підтвердив
+INSTANT_ACTIONS = ("service1_reset", "output")
 
 
 class CommandTracker:
@@ -39,6 +43,7 @@ class CommandTracker:
         self.expires_at: datetime | None = None
         self.error: str | None = None
         self.mode_before: str | None = None
+        self.running_before = False
         self._telemetry_at = None  # мітка телеметрії на момент постановки в чергу
         self._request_id = 0
         self._listeners: list[Callable[[], None]] = []
@@ -69,6 +74,14 @@ class CommandTracker:
             listener()
 
     @staticmethod
+    def running_from(data: dict | None) -> bool:
+        param = ((data or {}).get("params") or {}).get("105") or {}
+        try:
+            return int(param.get("value") or 0) != 0
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
     def mode_from(data: dict | None) -> str | None:
         param = ((data or {}).get("params") or {}).get("103") or {}
         return GENSET_MODE_BY_VALUE.get(str(param.get("value")))
@@ -78,6 +91,7 @@ class CommandTracker:
         """Нове натискання: повертає id запиту (відповідь застарілого запиту не перезапише новіший)."""
         self._request_id += 1
         self.mode_before = self.mode_from(data)
+        self.running_before = self.running_from(data)
         now = dt_util.utcnow()
         self.state, self.action, self.error, self.expires_at = "sending", action, None, None
         self.requested_at = self.updated_at = now
@@ -86,7 +100,9 @@ class CommandTracker:
 
     @property
     def _already_in_mode(self) -> bool:
-        """Контролер уже був у режимі цієї кнопки: зміни режиму не буде, чекати її не можна."""
+        """Контролер уже був у режимі цієї кнопки (або двигун уже працював для «Пуск»): зміни не буде, чекати її не можна."""
+        if self.action in START_ACTIONS:
+            return self.running_before
         return self.mode_before is not None and self.mode_before == MODE_BY_ACTION.get(self.action)
 
     @callback
@@ -95,7 +111,7 @@ class CommandTracker:
             return
         now = dt_util.utcnow()
         # Підтверджена контролером, а режим уже потрібний - виконано одразу
-        if state == "confirmed" and self._already_in_mode:
+        if state == "confirmed" and (self._already_in_mode or self.action in INSTANT_ACTIONS):
             state = "done"
         self.state, self.error, self.updated_at = state, error, now
         self._telemetry_at = (data or {}).get("timestamp")
@@ -117,8 +133,18 @@ class CommandTracker:
         now = dt_util.utcnow()
         # Виконано, коли режим змінився на потрібний (якщо вже був таким - чекаємо підтвердження/таймауту)
         fresh = not (data or {}).get("stale")
-        if mode and mode == target and mode != self.mode_before and fresh:
+        started = self.action in START_ACTIONS and fresh and self.running_from(data) and not self.running_before
+        if started or (mode and mode == target and mode != self.mode_before and fresh):
             self.state, self.updated_at, self.expires_at = "done", now, None
+        elif self.state == "queued" and self.action in INSTANT_ACTIONS and fresh and (
+            (data or {}).get("timestamp") not in (None, self._telemetry_at)
+        ):
+            # Контролер підключився - команду з черги надіслано
+            self.state, self.updated_at, self.expires_at = "done", now, None
+        elif self.action in START_ACTIONS and self.expires_at and now > self.expires_at:
+            # Прийнята (або в черзі), але двигун так і не вийшов зі спокою
+            self.state, self.updated_at, self.expires_at = "failed", now, None
+            self.error = "Двигун не запустився"
         elif (
             self.state == "queued" and self._already_in_mode and fresh
             and (data or {}).get("timestamp") not in (None, self._telemetry_at)

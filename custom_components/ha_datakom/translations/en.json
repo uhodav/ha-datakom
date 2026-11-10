@@ -8,12 +8,14 @@
         "data": {
           "api_url": "API URL",
           "scan_interval": "Update interval (seconds)",
-          "control_key": "Control key (optional)"
+          "control_key": "Control key (optional)",
+          "user_outputs": "User outputs (optional)"
         },
         "data_description": {
           "api_url": "Base API URL, e.g. https://example.com/datakom/api",
           "scan_interval": "How often to fetch data from the API (5-600 seconds). One request updates all entities",
-          "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created."
+          "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created.",
+          "user_outputs": "Controller user output numbers 1-16, comma separated (e.g. 1, 3), to create switches for. Requires the control key. The controller does not report output state: the switch shows the last command sent."
         }
       },
       "device": {
@@ -38,7 +40,8 @@
     "error": {
       "cannot_connect": "Failed to connect to API",
       "invalid_auth": "Invalid credentials",
-      "unknown": "Unknown error"
+      "unknown": "Unknown error",
+      "invalid_user_outputs": "Output numbers must be integers 1-16, comma separated"
     },
     "abort": {
       "already_configured": "Device is already configured"
@@ -368,6 +371,14 @@
       },
       "refresh": {
         "name": "Refresh"
+      },
+      "control_service1_reset": {
+        "name": "Service 1 done"
+      }
+    },
+    "switch": {
+      "user_output": {
+        "name": "Output {number}"
       }
     }
   },
@@ -378,12 +389,14 @@
         "data": {
           "api_url": "API URL",
           "scan_interval": "Update interval (seconds)",
-          "control_key": "Control key (optional)"
+          "control_key": "Control key (optional)",
+          "user_outputs": "User outputs (optional)"
         },
         "data_description": {
           "api_url": "Base API URL, e.g. https://example.com/datakom/api",
           "scan_interval": "How often to fetch data from the API (5-600 seconds). One request updates all entities",
-          "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created."
+          "control_key": "X-API-Key for generator control buttons. Without it no control buttons are created.",
+          "user_outputs": "Controller user output numbers 1-16, comma separated (e.g. 1, 3), to create switches for. Requires the control key. The controller does not report output state: the switch shows the last command sent."
         }
       },
       "params": {
@@ -411,6 +424,9 @@
           "fuel_reserve": "Fuel that is not counted in the time left (unusable rest at the bottom of the tank)."
         }
       }
+    },
+    "error": {
+      "invalid_user_outputs": "Output numbers must be integers 1-16, comma separated"
     }
   },
   "selector": {
@@ -420,6 +436,22 @@
         "model": "Model by load",
         "flowmeter": "Flowmeter",
         "ecu": "Engine ECU"
+      }
+    }
+  },
+  "services": {
+    "set_user_output": {
+      "name": "User output",
+      "description": "Switch a controller user output (1-16) on or off.",
+      "fields": {
+        "output": {
+          "name": "Output",
+          "description": "Output number 1-16"
+        },
+        "state": {
+          "name": "State",
+          "description": "on or off"
+        }
       }
     }
   }

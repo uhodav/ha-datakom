@@ -28,7 +28,8 @@ Custom integration for monitoring Datakom generator controllers via REST API. Su
 - **Single polling cycle**: one API request per update interval for all entities; when the controller stops sending data or the API is unreachable, entities keep their last values (also after a Home Assistant restart)
 - **Statistics and Energy dashboard**: standard units and state classes (kWh counters can be added to the Energy dashboard)
 - **Binary sensors**: API connection status, LED indicators, alarm monitoring
-- **Control buttons**: Stop/Auto/Manual/Test (with a control key), Refresh
+- **Control buttons**: Stop/Auto/Manual/Test/Run, Service 1 done (with a control key), Refresh
+- **User outputs**: switches for the controller user outputs 1-16 and the `ha_datakom.set_user_output` service (with a control key)
 - **Automatic parameter detection**: Auto-assigns device classes and units of measurement
 
 ## Installation
@@ -56,7 +57,8 @@ The Lovelace cards are shipped with the integration and set up automatically, so
 - **API URL**: Base URL of your Datakom REST API (e.g., `https://example.com/datakom/api`)
 - **Update Interval**: How often to fetch data, in seconds (5-600, default 15); one request updates all entities. Mode changes from the panel or the portal appear in Home Assistant within this interval
 - **Language**: Select interface language (Українська/English/Русский) - auto-detected from Home Assistant language
-- **Control key** (optional): the `X-API-Key` of the Datakom API server, required for the control buttons (Stop/Auto/Manual/Test). This is the API server's own key from its `data/control_key` file — not a Datakom/Rainbow/SCADA password; how to generate it: [datakom_listener → Remote Control](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Leave empty for monitoring only — control buttons are then not created. Can be changed later in the integration options.
+- **Control key** (optional): the `X-API-Key` of the Datakom API server, required for the control buttons (Stop/Auto/Manual/Test/Run, Service 1 done) and user outputs. This is the API server's own key from its `data/control_key` file — not a Datakom/Rainbow/SCADA password; how to generate it: [datakom_listener → Remote Control](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Leave empty for monitoring only — control buttons are then not created. Can be changed later in the integration options.
+- **User outputs** (optional): controller user output numbers 1-16, comma separated (e.g. `1, 3`): a switch is created for each. Requires the control key.
 
 ### Step 2: Parameter Selection
 - Choose which parameters to monitor (multiple selection supported)
@@ -131,7 +133,9 @@ Panel indicators of the controller, as on its front panel (`binary_sensor.datako
 
 ### Buttons
 - **`button.datakom_device_refresh`** - Refresh data now (without waiting for the update interval)
-- **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`** - Controller pushbuttons (created only when a control key is set). The controller connects to the API about once a minute, so a command pressed between connections waits in the API server queue and runs on the next connection (up to ~1.5 min). The press waits up to 90 s for the server answer; pressing the same button again while its command is still sending or queued is ignored; a different button replaces the previous command. On failure Home Assistant shows an error.
+- **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`**, **`_run`** - Controller pushbuttons (created only when a control key is set). The controller connects to the API about once a minute, so a command pressed between connections waits in the API server queue and runs on the next connection (up to ~1.5 min). The press waits up to 90 s for the server answer; pressing the same button again while its command is still sending or queued is ignored; a different button replaces the previous command. On failure Home Assistant shows an error. **Run** (RUN button, the code of the Rainbow Plus panel: register 8193 = 18) starts the engine in manual mode; its command is `done` when the engine leaves the rest state and `failed` if it did not within 2 min. Requires datakom_listener with the `run` action.
+- **`button.datakom_device_control_service1_reset`** - "Service 1 done": resets the Engine Service 1 hours and days counters after maintenance (register 8196 = 8).
+- **`switch.datakom_device_user_output_N`** - Controller user output N (only the outputs listed in the integration settings). The controller does not report output state: the switch shows the last command sent (assumed state, restored after a restart). Any output can also be switched with the service `ha_datakom.set_user_output` (`output`: 1-16, `state`: `on`/`off`).
 - **`sensor.datakom_device_control_command`** - Progress of the last control command (created only with a control key): `idle`, `sending`, `queued` (waiting for the controller), `confirmed` (accepted, waiting for the mode change), `done` (the controller mode changed; if it already was the button's mode - as soon as the controller accepted the command or, when it was queued, with the next telemetry), `failed`, `expired` (the controller did not connect while the command was queued). Attributes: `action`, `requested_at`, `updated_at`, `expires_at`, `error`. The controller card highlights the pressed button while the command is in progress and shows this status under the buttons (option `command_entity`).
 
 ## Custom Lovelace Card
@@ -397,7 +401,8 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **Єдиний цикл опитування**: один запит до API за інтервал для всіх сутностей; коли контролер перестає надсилати дані або API недоступний, сутності зберігають останні значення (також після перезапуску Home Assistant)
 - **Статистика та панель Енергія**: стандартні одиниці та класи станів (лічильники кВт·год можна додати до панелі Енергія)
 - **Бінарні сенсори**: Стан API підключення, індикатори LED, моніторинг аварій
-- **Кнопки керування**: Стоп/Авто/Ручний/Тест (з ключем керування), Оновити
+- **Кнопки керування**: Стоп/Авто/Ручний/Тест/Пуск, ТО-1 виконано (з ключем керування), Оновити
+- **Користувацькі виходи**: перемикачі для користувацьких виходів контролера 1-16 і сервіс `ha_datakom.set_user_output` (з ключем керування)
 - **Автоматичне визначення параметрів**: Автоматичне призначення класів пристроїв та одиниць вимірювання
 
 ## Встановлення
@@ -425,7 +430,8 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 - **URL API**: Базова URL вашого Datakom REST API (наприклад, `https://example.com/datakom/api`)
 - **Інтервал оновлення**: Як часто оновлювати дані, у секундах (5-600, за замовчуванням 15); один запит оновлює всі сутності. Зміна режиму з панелі або порталу з'являється в Home Assistant у межах цього інтервалу
 - **Мова**: Виберіть мову інтерфейсу (Українська/English/Русский) - автоматично визначається з мови Home Assistant
-- **Ключ керування** (необов'язково): `X-API-Key` сервера Datakom API, потрібен для кнопок керування (Стоп/Авто/Ручний/Тест). Це власний ключ API-сервера з його файлу `data/control_key` — не пароль Datakom/Rainbow/SCADA; як згенерувати: [datakom_listener → Дистанційне керування](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Залиште порожнім лише для моніторингу — тоді кнопки керування не створюються. Можна змінити пізніше в параметрах інтеграції.
+- **Ключ керування** (необов'язково): `X-API-Key` сервера Datakom API, потрібен для кнопок керування (Стоп/Авто/Ручний/Тест/Пуск, ТО-1 виконано) і користувацьких виходів. Це власний ключ API-сервера з його файлу `data/control_key` — не пароль Datakom/Rainbow/SCADA; як згенерувати: [datakom_listener → Дистанційне керування](https://github.com/uhodav/datakom_listener#remote-control--дистанційне-керування). Залиште порожнім лише для моніторингу — тоді кнопки керування не створюються. Можна змінити пізніше в параметрах інтеграції.
+- **Користувацькі виходи** (необов'язково): номери користувацьких виходів контролера 1-16 через кому (наприклад `1, 3`): для кожного створюється перемикач. Потрібен ключ керування.
 
 ### Крок 2: Вибір параметрів
 - Виберіть параметри для моніторингу (підтримується множинний вибір)
@@ -500,7 +506,9 @@ This integration is provided as-is for monitoring Datakom generator controllers.
 
 ### Кнопки
 - **`button.datakom_device_refresh`** - Оновити дані зараз (не чекаючи інтервалу оновлення)
-- **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`** - Кнопки контролера (створюються лише коли задано ключ керування). Контролер підключається до API приблизно раз на хвилину, тож команда, натиснута між підключеннями, чекає в черзі API-сервера і виконується при наступному підключенні (до ~1,5 хв). Натискання чекає відповіді сервера до 90 с; повторне натискання тієї ж кнопки, поки її команда надсилається або в черзі, ігнорується; інша кнопка замінює попередню команду. У разі помилки Home Assistant показує повідомлення.
+- **`button.datakom_device_control_stop`**, **`_auto`**, **`_manual`**, **`_test`**, **`_run`** - Кнопки контролера (створюються лише коли задано ключ керування). Контролер підключається до API приблизно раз на хвилину, тож команда, натиснута між підключеннями, чекає в черзі API-сервера і виконується при наступному підключенні (до ~1,5 хв). Натискання чекає відповіді сервера до 90 с; повторне натискання тієї ж кнопки, поки її команда надсилається або в черзі, ігнорується; інша кнопка замінює попередню команду. У разі помилки Home Assistant показує повідомлення. **Пуск** (кнопка RUN, код панелі Rainbow Plus: регістр 8193 = 18) запускає двигун у ручному режимі; команда `done`, коли двигун вийшов зі стану спокою, і `failed`, якщо цього не сталося за 2 хв. Потрібен datakom_listener з дією `run`.
+- **`button.datakom_device_control_service1_reset`** - «ТО-1 виконано»: скидає лічильники ТО-1 (години й дні) після обслуговування (регістр 8196 = 8).
+- **`switch.datakom_device_user_output_N`** - Користувацький вихід N контролера (лише виходи, перелічені в налаштуваннях інтеграції). Стан виходів контролер не передає: перемикач показує останню надіслану команду (assumed state, відновлюється після перезапуску). Будь-який вихід можна перемкнути й сервісом `ha_datakom.set_user_output` (`output`: 1-16, `state`: `on`/`off`).
 - **`sensor.datakom_device_control_command`** - Хід останньої команди керування (лише з ключем керування): `idle`, `sending`, `queued` (чекає контролер), `confirmed` (прийнята, чекає зміни режиму), `done` (режим контролера змінився; якщо він уже був режимом кнопки - щойно контролер прийняв команду або, якщо вона чекала в черзі, з наступною телеметрією), `failed`, `expired` (контролер не підключився, поки команда була в черзі). Атрибути: `action`, `requested_at`, `updated_at`, `expires_at`, `error`. Картка контролера підсвічує натиснуту кнопку, поки команда виконується, і показує цей статус під кнопками (параметр `command_entity`).
 
 ## Приклад панелі

@@ -2,12 +2,24 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
-from . import DOMAIN, FUEL_DEFAULTS, FUEL_RATE_SOURCES, _cleanup_old_entities
+from . import DOMAIN, FUEL_DEFAULTS, FUEL_RATE_SOURCES, _cleanup_old_entities, parse_user_outputs
 from .coordinator import DEFAULT_SCAN_INTERVAL, MIN_SCAN_INTERVAL, MAX_SCAN_INTERVAL
 import aiohttp
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _user_outputs_text(value) -> str:
+    """[1, 3] -> «1, 3» для поля форми."""
+    if isinstance(value, (list, tuple)):
+        return ", ".join(str(n) for n in value)
+    return str(value or "")
+
+
+def _user_outputs_field(default) -> dict:
+    # Номери користувацьких виходів контролера (1-16), для яких створюються перемикачі; порожньо - жодного
+    return {vol.Optional("user_outputs", default=_user_outputs_text(default)): str}
 
 
 
@@ -33,6 +45,11 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif not (MIN_SCAN_INTERVAL <= scan_interval <= MAX_SCAN_INTERVAL):
                 errors["scan_interval"] = "invalid"
             else:
+                try:
+                    self.user_outputs = parse_user_outputs(user_input.get("user_outputs"))
+                except ValueError:
+                    errors["user_outputs"] = "invalid_user_outputs"
+            if not errors:
                 self.api_url = api_url
                 self.scan_interval = scan_interval
                 self.language = language
@@ -89,6 +106,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional("control_key", default=""): selector.TextSelector(
                     selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
                 ),
+                **_user_outputs_field(""),
             }),
             errors=errors,
             description_placeholders={"step": "1"},
@@ -141,6 +159,7 @@ class DatakomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "param_ids": selected_params,
                     "device_name": "Datakom Device",
                     "control_key": getattr(self, "control_key", ""),
+                    "user_outputs": getattr(self, "user_outputs", []),
                     **FUEL_DEFAULTS,
                     "fuel_rate_source": FUEL_RATE_SOURCES[0],
                 }
@@ -192,6 +211,11 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                 elif not (MIN_SCAN_INTERVAL <= scan_interval <= MAX_SCAN_INTERVAL):
                     errors["scan_interval"] = "invalid"
                 else:
+                    try:
+                        self.user_outputs = parse_user_outputs(user_input.get("user_outputs"))
+                    except ValueError:
+                        errors["user_outputs"] = "invalid_user_outputs"
+                if not errors:
                     self.api_url = api_url
                     self.scan_interval = scan_interval
                     self.language = language
@@ -227,6 +251,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("control_key", default=current_data.get("control_key", "")): selector.TextSelector(
                     selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
                 ),
+                **_user_outputs_field(current_data.get("user_outputs", [])),
             }),
             errors=errors,
         )
@@ -300,6 +325,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
                     "param_ids": self.param_ids,
                     "device_name": current_data.get("device_name", "Datakom Device"),
                     "control_key": getattr(self, "control_key", current_data.get("control_key", "")),
+                    "user_outputs": getattr(self, "user_outputs", current_data.get("user_outputs", [])),
                     "fuel_rate_source": user_input["fuel_rate_source"],
                     **{key: float(user_input[key]) for key in FUEL_DEFAULTS},
                 }

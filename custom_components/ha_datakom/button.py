@@ -1,27 +1,20 @@
 """Платформа button для Datakom интеграции (REST API)."""
-import asyncio
 import logging
-import aiohttp
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.event import async_call_later
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import DOMAIN
+from .control_api import async_send_control
 
 _LOGGER = logging.getLogger(__name__)
 
-# Дії, дозволені API за замовчуванням (genset/mains - перемикання навантаження - вимкнені)
-CONTROL_ACTIONS = ["stop", "auto", "manual", "test"]
-
-# Сервер відповідає за ~20 с (команда в черзі) або ~10 с (підтвердження), але запити виконуються по одному:
-# кілька натискань поспіль чекають одне одного
-CONTROL_TIMEOUT = 90
+# Дії, дозволені API за замовчуванням (genset/mains - перемикання навантаження - вимкнені).
+# run - кнопка RUN (пуск двигуна в ручному режимі), service1_reset - скинути лічильники ТО-1 («ТО виконано»)
+CONTROL_ACTIONS = ["stop", "auto", "manual", "test", "run", "service1_reset"]
 
 
 async def async_setup_entry(
@@ -86,7 +79,7 @@ class DatakomRefreshButton(ButtonEntity):
 
 
 class DatakomControlButton(ButtonEntity):
-    """Button для управления устройством Datakom (Run/Auto/Manual/Test/Stop)."""
+    """Button для управления устройством Datakom (Run/Auto/Manual/Test/Stop, скидання ТО-1)."""
 
     def __init__(self, api_url, device_name, action, control_key, coordinator, tracker=None):
         self._api_url = api_url
@@ -109,6 +102,7 @@ class DatakomControlButton(ButtonEntity):
             "manual": "mdi:hand-back-right",
             "test": "mdi:test-tube",
             "stop": "mdi:stop",
+            "service1_reset": "mdi:wrench-check",
         }
         self._attr_icon = icon_map.get(action, "mdi:gesture-tap-button")
 
@@ -130,56 +124,12 @@ class DatakomControlButton(ButtonEntity):
         }
 
     async def async_press(self) -> None:
-        """Обработка нажатия кнопки управления.
-
-        Контроллер подключается к API примерно раз в минуту: команда между подключениями стоит в очереди
-        сервера (он отвечает «queued» через ~20 с). Ход команды - в sensor.datakom_device_control_command."""
+        """Обработка нажатия кнопки управления. Ход команды - в sensor.datakom_device_control_command."""
         tracker = self._tracker
         # Та же команда уже отправляется или ждёт в очереди - повторное нажатие ничего не меняет
         if tracker and tracker.action == self._action and tracker.state in ("sending", "queued"):
             _LOGGER.info(f"Datakom: Control command {self._action} already {tracker.state}, press ignored")
             return
-
-        request_id = tracker.start(self._action, self._coordinator.data) if tracker else 0
-        url = f"{self._api_url}/device/control"
-        _LOGGER.info(f"Datakom: Sending control command {self._action} to {url}")
-        try:
-            session = async_get_clientsession(self.hass)
-            async with session.post(
-                url,
-                json={"action": self._action},
-                headers={"X-API-Key": self._control_key},
-                timeout=aiohttp.ClientTimeout(total=CONTROL_TIMEOUT),
-            ) as resp:
-                data = await resp.json(content_type=None)
-        except Exception as e:
-            reason = (
-                f"немає відповіді від API-сервера за {CONTROL_TIMEOUT} с"
-                if isinstance(e, (asyncio.TimeoutError, TimeoutError))
-                else (str(e) or type(e).__name__)
-            )
-            _LOGGER.error(f"Datakom: Control button {self._attr_unique_id} request error: {reason}")
-            if tracker:
-                tracker.finish(request_id, "failed", reason)
-            raise HomeAssistantError(f"Datakom: команда {self._action} не відправлена: {reason}") from e
-
-        if not data.get("success"):
-            error = data.get("error") or "невідома помилка"
-            _LOGGER.error(f"Datakom: Control command {self._action} failed, response: {data}")
-            if tracker:
-                tracker.finish(request_id, "failed", error)
-            raise HomeAssistantError(f"Datakom: команда {self._action} не виконана: {error}")
-        if data.get("queued"):
-            _LOGGER.info(f"Datakom: Control command {self._action} queued until the controller reconnects")
-            if tracker:
-                tracker.finish(request_id, "queued", data=self._coordinator.data)
-        else:
-            _LOGGER.info(f"Datakom: Control command {self._action} confirmed by controller")
-            if tracker:
-                tracker.finish(request_id, "confirmed", data=self._coordinator.data)
-        # Контроллер присылает новый режим через несколько секунд после подтверждения
-        async def _refresh(_now):
-            await self._coordinator.async_request_refresh()
-
-        for delay in (3, 10):
-            async_call_later(self.hass, delay, _refresh)
+        await async_send_control(
+            self.hass, self._api_url, self._control_key, {"action": self._action}, self._coordinator, tracker
+        )

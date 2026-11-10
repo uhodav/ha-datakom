@@ -1,3 +1,6 @@
+// Дії, для яких інтеграція створює кнопки button.datakom_device_control_<дія>
+const DATAKOM_CONTROL_ACTIONS = ['test', 'auto', 'manual', 'stop', 'run'];
+
 class DatakomControllerCard extends HTMLElement {
   static _resourceCheckDone = false;
   static _resourceWarningShown = false;
@@ -587,8 +590,11 @@ class DatakomControllerCard extends HTMLElement {
       // Добавляем класс для скрытия на малых экранах
       const hideClass = btn.hide_if_small ? 'hide-if-small' : '';
       
-      // Добавляем атрибут button_entity для вызова кнопки Home Assistant
-      const buttonEntityAttr = btn.button_entity ? `data-button-entity="${btn.button_entity}"` : '';
+      // Добавляем атрибут button_entity для вызова кнопки Home Assistant.
+      // Не задан (и нет tap_action) - кнопка интеграции для этого действия (RUN появилась в 2.13.0)
+      const buttonEntity = btn.button_entity
+        || (!btn.tap_action && DATAKOM_CONTROL_ACTIONS.includes(btn.action) ? `button.datakom_device_control_${btn.action}` : '');
+      const buttonEntityAttr = buttonEntity ? `data-button-entity="${buttonEntity}"` : '';
       
       return `
         <div class="control-button ${hideClass}">
@@ -893,7 +899,8 @@ class DatakomControllerCard extends HTMLElement {
           image_on: '/ha_datakom/img/run-k.png',
           image_off: '/ha_datakom/img/run.png',
           indicator_entity: 'binary_sensor.run', 
-          indicator_color: 'yellow'
+          indicator_color: 'yellow',
+          button_entity: 'button.datakom_device_control_run'
         }
       ]
     };

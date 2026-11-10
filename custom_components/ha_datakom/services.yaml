@@ -2,3 +2,22 @@ update_devices:
   name: Обновить список устройств
   description: Подключается к Datakom WebSocket и обновляет список устройств
   fields: {}
+
+set_user_output:
+  fields:
+    output:
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 16
+          mode: box
+    state:
+      required: true
+      example: "on"
+      selector:
+        select:
+          options:
+            - "on"
+            - "off"
