@@ -317,7 +317,7 @@ class DatakomOptionsFlow(config_entries.OptionsFlow):
         def number(unit, step):
             return selector.NumberSelector(
                 selector.NumberSelectorConfig(
-                    min=0, max=1000, step=step, mode=selector.NumberSelectorMode.BOX, unit_of_measurement=unit
+                    min=-1000, max=1000, step=step, mode=selector.NumberSelectorMode.BOX, unit_of_measurement=unit
                 )
             )
 

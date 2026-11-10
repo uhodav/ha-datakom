@@ -19,13 +19,18 @@ __all__ = ["DOMAIN", "FUEL_DEFAULTS", "FUEL_RATE_SOURCES", "_cleanup_old_entitie
 FUEL_RATE_SOURCES = ["auto", "model", "flowmeter", "ecu"]
 
 # Эмпирическая модель расхода топлива: Q = max(idle_rate, slope * P - offset), л/ч (P - полная мощность, кВА).
+# По умолчанию - подгонка по баку реального генератора (запуски 03-08.11.2026): 3.85 л/ч за работу
+# + 0.228 л на кВт·ч (≈ 0.217 л на кВА·ч при cos φ ≈ 0.95), т.е. Q = 3.85 + 0.217 * P (offset отрицательный).
 # reserve - неиспользуемый остаток топлива (л), не учитывается в расчёте времени работы
 FUEL_DEFAULTS = {
-    "fuel_idle_rate": 2.5,
-    "fuel_slope": 1.014,
-    "fuel_offset": 17.97,
+    "fuel_idle_rate": 3.85,
+    "fuel_slope": 0.217,
+    "fuel_offset": -3.85,
     "fuel_reserve": 30,
 }
+# Прежние значения по умолчанию (до 2.12.0): завышали расход при большой нагрузке на ~40 % и занижали на малой.
+# Записи с ровно этими значениями (их не меняли вручную) переводятся на новые при запуске.
+FUEL_OLD_DEFAULTS = {"fuel_idle_rate": 2.5, "fuel_slope": 1.014, "fuel_offset": 17.97}
 
 # Карточки Lovelace поставляются с интеграцией: файлы из frontend/ отдаются по этому адресу (там же картинки),
 # а сами карточки копируются в www/ha_datakom и подключаются ресурсом панелей автоматически (см. card_loader)
@@ -52,6 +57,9 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if all(float(entry.data.get(k, -1)) == v for k, v in FUEL_OLD_DEFAULTS.items()):
+        hass.config_entries.async_update_entry(entry, data={**entry.data, **{k: FUEL_DEFAULTS[k] for k in FUEL_OLD_DEFAULTS}})
+        _LOGGER.info("Datakom: fuel model coefficients updated to the new defaults (3.85 + 0.217 × kVA)")
     """Set up Datakom from a config entry (UI)."""
     await _async_register_frontend(hass)
 

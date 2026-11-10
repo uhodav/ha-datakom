@@ -407,7 +407,7 @@
           "fuel_rate_source": "Automatic: the flowmeter or ECU when it shows consumption above 0, otherwise the load model. If you have a fuel flow sensor, the model coefficients below are not used.",
           "fuel_idle_rate": "Model: consumption at idle and low load. The calculated consumption never drops below this value.",
           "fuel_slope": "Model: how many L/h the consumption grows per 1 kVA of load.",
-          "fuel_offset": "Model: subtracted from slope × P. Together with the slope it sets the straight line of consumption vs load above the idle level.",
+          "fuel_offset": "Model: subtracted from slope × P (may be negative). Together with the slope it sets the straight line of consumption vs load. Default: Q = 3.85 + 0.217 × P (offset −3.85), fitted by the tank of a real genset.",
           "fuel_reserve": "Fuel that is not counted in the time left (unusable rest at the bottom of the tank)."
         }
       }
