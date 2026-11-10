@@ -412,6 +412,8 @@ class DatakomOutputBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:electric-switch-closed"
+    # Вимкнено за замовчуванням: увімкнути потрібні виходи в налаштуваннях сутностей
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, number: int, device_name: str):
         super().__init__(coordinator)

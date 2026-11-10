@@ -94,6 +94,8 @@ class DatakomControlButton(ButtonEntity):
         self._attr_unique_id = f"datakom_control_{action}"
         self._attr_translation_key = f"control_{action}"
         self._attr_entity_category = EntityCategory.CONFIG
+        # «ТО-1 виконано» потрібна рідко - вимкнена за замовчуванням (увімкнути в налаштуваннях сутностей)
+        self._attr_entity_registry_enabled_default = action != "service1_reset"
         
         # Устанавливаем иконки для каждого действия
         icon_map = {

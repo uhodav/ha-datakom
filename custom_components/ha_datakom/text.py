@@ -76,6 +76,8 @@ class DatakomScheduleText(CoordinatorEntity, TextEntity):
     _attr_icon = "mdi:calendar-clock"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_native_max = 255
+    # Вимкнено за замовчуванням: увімкнути в налаштуваннях сутностей, щоб змінювати графік з HA
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, api_url: str, control_key: str, device_name: str, day: str):
         super().__init__(coordinator)
